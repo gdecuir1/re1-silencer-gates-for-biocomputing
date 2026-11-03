@@ -1,0 +1,45 @@
+name: re1-gates
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # Core
+  - python=3.11
+  - pip
+
+  # Data and stats
+  - pandas
+  - numpy
+  - scipy
+  - statsmodels
+  - scikit-learn
+
+  # Genomics I/O
+  - pybigwig          # reads bigWig over HTTP, so phyloP is queried not downloaded
+  - pysam
+  - biopython
+  - pyfaidx
+
+  # Command-line genomics
+  - bedtools
+  - samtools
+  - ucsc-liftover
+  - ucsc-bigwigaverageoverbed
+  - ucsc-twobittofa
+  - meme              # provides FIMO for motif scoring
+  - cd-hit            # sequence clustering, to stop near-duplicate leakage across folds
+
+  # Figures
+  - matplotlib
+  - seaborn
+
+  # Notebooks
+  - jupyterlab
+  - ipykernel
+
+# Not on conda: lsgkm (gapped k-mer SVM).
+# Build it separately and put gkmtrain and gkmpredict on PATH:
+#   git clone https://github.com/Dongwon-Lee/lsgkm.git
+#   cd lsgkm/src && make && cd ..
+#   export PATH="$PWD/bin:$PATH"
+# Do this in week 1, not week 4: a compile failure found late is a crisis.
