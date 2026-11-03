@@ -1,0 +1,69 @@
+# Project data and generated outputs: allow only documentation/placeholders.
+/data/**
+!/data/**/
+!/data/**/README.md
+!/data/**/.gitkeep
+/results/**
+!/results/**/
+!/results/**/README.md
+!/results/**/.gitkeep
+!/results/folds/**
+
+# Large genomic formats, wherever they land
+*.fa
+*.fasta
+*.2bit
+*.fai
+*.bw
+*.bigWig
+*.bam
+*.bai
+*.maf
+*.chain
+*.chain.gz
+*.vcf
+*.vcf.gz
+*.bed.gz
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+profile_default/
+ipython_config.py
+
+# Testing and type checking
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Editors and OS ----
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Secrets ----
+.env
+*.key

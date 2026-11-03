@@ -37,6 +37,10 @@ dependencies:
   - jupyterlab
   - ipykernel
 
+  # Development checks (no project data required)
+  - pytest
+  - ruff
+
 # Not on conda: lsgkm (gapped k-mer SVM).
 # Build it separately and put gkmtrain and gkmpredict on PATH:
 #   git clone https://github.com/Dongwon-Lee/lsgkm.git

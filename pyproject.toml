@@ -1,0 +1,22 @@
+[project]
+name = "re1-silencer-gates-for-biocomputing"
+version = "0.1.0"
+description = "Data preparation scaffold for comparative analysis of RE1 silencers"
+requires-python = ">=3.11,<3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+markers = ["integration: uses installed genomics executables with temporary synthetic fixtures"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["data", "results"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+docstring-code-format = true
