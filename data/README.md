@@ -1,10 +1,304 @@
-# Data inventory
+# Data Catalog and Provenance Ledger
+
+**Authoritative record of local source files, acquisition evidence, and download provenance.**
+
+[Main operating guide](../README.md) · [Research rationale](../README%20%282%29.md) · [Week 1 workflow](../data-README.md)
+
+Catalog status: **2026-11-03**. Data payloads are local and ignored by Git; this README is versioned documentation. Existing download records are historical evidence and must not be rewritten to match a new file or interpretation.
+
+> **Assembly:** native GEO `motif` and `noMotif` intervals are supported as **hg19**. The project's hg38 target is a separate coordinate system. Source intervals have not been converted. The resolved assembly does not imply that every element, variant, or library has been sequence-validated.
+
+## Contents
+
+1. [Catalog scope and status](#catalog-scope-and-status)
+2. [Storage map](#storage-map)
+3. [GEO supplementary inventory](#geo-supplementary-inventory)
+4. [Table schemas and missing values](#table-schemas-and-missing-values)
+5. [Native population and identifier semantics](#native-population-and-identifier-semantics)
+6. [Published sequence supplement](#published-sequence-supplement)
+7. [Assembly evidence cache](#assembly-evidence-cache)
+8. [Acquisition failures and content validation](#acquisition-failures-and-content-validation)
+9. [Pending inputs and configured locations](#pending-inputs-and-configured-locations)
+10. [Provenance contract](#provenance-contract)
+11. [Historical planning inventory](#historical-planning-inventory)
+12. [Phase A download ledger](#phase-a-discovery-downloads)
+13. [Assembly-investigation download ledger](#coordinate-assembly-investigation-downloads)
+
+## Catalog scope and status
+
+The original discovery and assembly follow-up acquired **101 files/responses totaling 33,071,763 bytes**. This total excludes README files and `.gitkeep` placeholders. The acquisition record includes one failed HTML response saved under a `.zip` filename; file presence and a checksum are not proof that its content is valid scientific input.
+
+| Evidence category | State | What it establishes |
+| --- | --- | --- |
+| GEO directory inventory | Inspected and saved | Three supplementary-directory entries and their observed sizes |
+| Six tables inside the GEO archive | Read directly from gzip members | Row counts, field names, inferred types, native populations, and interval metadata |
+| Noncanonical K562 results table | Inspected separately | A distinct processed table with entirely missing coordinate columns |
+| Table S2 publisher ZIP | Downloaded and opened | Oligo names, sequence strings, and library labels |
+| UCSC sequence responses | Downloaded as bounded windows | Reference DNA for the sampled assembly comparisons |
+| Prepared MPRA modeling input | Not produced | Population/context/sign decisions remain unresolved |
+| Whole reference genomes | Not downloaded | Full reference-based downstream processing remains pending |
+
+A fresh checkout contains the documentation, not these ignored payloads. Acquisition instructions are in the [Week 1 guide](../data-README.md#acquisition-and-replay-procedures).
+
+## Storage map
+
+Paths below are relative to the repository root. Links from this README are relative to `data/`.
+
+| Repository path | Contents | Treatment |
+| --- | --- | --- |
+| `data/raw/geo/GSE196171/` | Archive, processed table, inventory, metadata, directory snapshot | Retain original downloaded bytes |
+| `data/raw/assembly_check/Table_S2_publisher.zip` | Valid published sequence supplement | Retain archive; inspect its member directly |
+| `data/raw/assembly_check/mmc3.zip` | Failed PMC HTML response | Preserve failure evidence; never parse as the sequence supplement |
+| `data/raw/assembly_check/ucsc/` | 94 assembly-specific JSON responses | Verify URL/assembly/coordinates/hash before reuse |
+| `data/processed/` | Future prepared inputs | Currently contains only `.gitkeep` |
+| `results/tables/` | Generated discovery and assembly reports | Derived artifacts, not original downloads |
+| `results/figures/` | Future validation/scientific figures | No figures generated yet |
+| `results/folds/` | Future reproducible fold definitions | No real-data assignments generated yet |
+
+The six gzip tables inside `GSE196171_RAW.tar` were not separately extracted to disk. They have one archive acquisition record, plus the member inventory below. Do not count archive members as six additional downloaded files.
+
+## GEO supplementary inventory
+
+Source: [NCBI supplementary directory](https://ftp.ncbi.nlm.nih.gov/geo/series/GSE196nnn/GSE196171/suppl/).
+
+| Directory entry | Observed bytes | Local file | Meaning |
+| --- | ---: | --- | --- |
+| `GSE196171_RAW.tar` | 31,252,480 | [Archive](raw/geo/GSE196171/GSE196171_RAW.tar) | Container for six compressed tables; its RAW filename does not mean all fields are unprocessed counts |
+| `GSE196171_nonCan_K562_results.run1.txt.gz` | 308,452 | [Noncanonical results](raw/geo/GSE196171/GSE196171_nonCan_K562_results.run1.txt.gz) | Separate K562 experiment |
+| `filelist.txt` | 596 | [NCBI inventory](raw/geo/GSE196171/filelist.txt) | Archive/member metadata |
+
+Two additional discovery snapshots were saved: [series metadata](raw/geo/GSE196171/series_metadata.soft.txt), 3,685 bytes, and [directory HTML](raw/geo/GSE196171/supplementary_directory.html), 832 bytes. These are metadata responses, not additional supplementary-directory datasets.
+
+### Archive members
+
+The byte counts below are sizes of the compressed gzip members inside the TAR, not decompressed text sizes. Table row counts exclude headers.
+
+| Member | Compressed bytes | Rows | Columns | Experiment |
+| --- | ---: | ---: | ---: | --- |
+| `GSM5861606_MPRAduo_counts_benchmark_run1.txt.gz` | 1,282,800 | 27,169 | 20 | Benchmark run 1 |
+| `GSM5861607_MPRAduo_counts_benchmark_run2.txt.gz` | 1,511,379 | 27,169 | 20 | Benchmark run 2 |
+| `GSM5861611_MPRAduo_counts_WGREST_GM12878.txt.gz` | 7,144,960 | 139,325 | 20 | WGREST / GM12878 |
+| `GSM5861612_MPRAduo_counts_WGREST_HepG2.txt.gz` | 7,125,969 | 139,325 | 20 | WGREST / HepG2 |
+| `GSM5861613_MPRAduo_counts_WGREST_K562.txt.gz` | 7,086,099 | 139,325 | 20 | WGREST / K562 |
+| `GSM5861614_MPRAduo_counts_WGREST_SKNSH.txt.gz` | 7,094,836 | 139,325 | 20 | WGREST / source label `SK.N.SH` |
+
+The separate noncanonical table has **4,975 rows and 20 columns**. It is not a substitute for the canonical 8,436-element population.
+
+## Table schemas and missing values
+
+The tables below enumerate every original column, grouped by inferred dtype. The source files are read with `pandas.read_csv(..., sep="\t", low_memory=False)` and default NA recognition. Dtypes describe parser output, not declared database types or biological measurements. In particular, `float64` can represent integer-valued counts with missing entries, and an entirely missing column also infers a floating dtype.
+
+The original discovery used pandas 3.1.0; the schema tables below were regenerated from the local files during this documentation update. The detailed [discovery report](../results/tables/week1_discovery.md) also records each column's nonmissing count and original order.
+
+### GSM5861606_MPRAduo_counts_benchmark_run1.txt.gz
+
+| Rows | Observed dtype | Columns with this dtype |
+| ---: | --- | --- |
+| 27,169 | `str` | `id`, `library`, `enhancer`, `silencer`, `chromosome`, `start`, `end`, `project` |
+| 27,169 | `int64` | `cDNA_01`, `cDNA_02`, `cDNA_03`, `cDNA_04`, `plmd_01`, `plmd_02`, `plmd_03`, `plmd_04`, `PlasmidsBCsum` |
+| 27,169 | `float64` | `plmean`, `log2FoldChange`, `lfcSE` |
+
+### GSM5861607_MPRAduo_counts_benchmark_run2.txt.gz
+
+| Rows | Observed dtype | Columns with this dtype |
+| ---: | --- | --- |
+| 27,169 | `str` | `id`, `library`, `enhancer`, `silencer`, `chromosome`, `start`, `end`, `project` |
+| 27,169 | `int64` | `cDNA_01`, `cDNA_02`, `cDNA_03`, `cDNA_04`, `plmd_01`, `plmd_02`, `plmd_03`, `plmd_04`, `PlasmidsBCsum` |
+| 27,169 | `float64` | `plmean`, `log2FoldChange`, `lfcSE` |
+
+### GSM5861611_MPRAduo_counts_WGREST_GM12878.txt.gz
+
+| Rows | Observed dtype | Columns with this dtype |
+| ---: | --- | --- |
+| 139,325 | `str` | `id`, `celltype`, `enhancer`, `silencer`, `chromosome`, `project` |
+| 139,325 | `float64` | `start`, `end`, `GM12878_1`, `GM12878_2`, `GM12878_3`, `GM12878_4`, `plasmid_1`, `plasmid_2`, `plasmid_3`, `plasmid_4`, `PlasmidsBCsum`, `plmean`, `log2FoldChange`, `lfcSE` |
+
+### GSM5861612_MPRAduo_counts_WGREST_HepG2.txt.gz
+
+| Rows | Observed dtype | Columns with this dtype |
+| ---: | --- | --- |
+| 139,325 | `str` | `id`, `celltype`, `enhancer`, `silencer`, `chromosome`, `project` |
+| 139,325 | `float64` | `start`, `end`, `HepG2_1`, `HepG2_2`, `HepG2_3`, `HepG2_4`, `plasmid_1`, `plasmid_2`, `plasmid_3`, `plasmid_4`, `PlasmidsBCsum`, `plmean`, `log2FoldChange`, `lfcSE` |
+
+### GSM5861613_MPRAduo_counts_WGREST_K562.txt.gz
+
+| Rows | Observed dtype | Columns with this dtype |
+| ---: | --- | --- |
+| 139,325 | `str` | `id`, `celltype`, `enhancer`, `silencer`, `chromosome`, `project` |
+| 139,325 | `float64` | `start`, `end`, `K562_1`, `K562_2`, `K562_3`, `K562_4`, `plasmid_1`, `plasmid_2`, `plasmid_3`, `plasmid_4`, `PlasmidsBCsum`, `plmean`, `log2FoldChange`, `lfcSE` |
+
+### GSM5861614_MPRAduo_counts_WGREST_SKNSH.txt.gz
+
+| Rows | Observed dtype | Columns with this dtype |
+| ---: | --- | --- |
+| 139,325 | `str` | `id`, `celltype`, `enhancer`, `silencer`, `chromosome`, `project` |
+| 139,325 | `float64` | `start`, `end`, `SK.N.SH_1`, `SK.N.SH_2`, `SK.N.SH_3`, `SK.N.SH_4`, `plasmid_1`, `plasmid_2`, `plasmid_3`, `plasmid_4`, `PlasmidsBCsum`, `plmean`, `log2FoldChange`, `lfcSE` |
+
+### GSE196171_nonCan_K562_results.run1.txt.gz
+
+| Rows | Observed dtype | Columns with this dtype |
+| ---: | --- | --- |
+| 4,975 | `str` | `ID`, `project` |
+| 4,975 | `float64` | `SNP`, `chr`, `pos`, `ref_allele`, `alt_allele`, `allele`, `window`, `strand`, `haplotype`, `start`, `stop`, `ctrl_mean`, `exp_mean`, `log2FoldChange`, `lfcSE`, `stat`, `pvalue`, `padj` |
+
+### Important interpretation details
+
+| Field or pattern | Observed meaning / limitation |
+| --- | --- |
+| WGREST `id` | Unique construct identifier, combining enhancer and silencer context |
+| WGREST `silencer` | Candidate element identifier; repeated across five enhancer contexts |
+| `project` | Population/category label; exact native labels are `motif` and `noMotif` |
+| `celltype` | Source cell label; SK-N-SH is spelled `SK.N.SH` in the file |
+| `chromosome`, `start`, `end` | Native interval metadata; source chromosome labels omit the `chr` prefix |
+| `log2FoldChange`, `lfcSE` | Processed activity/statistical fields; some values are missing |
+| WGREST count columns | Cell-specific replicate columns and plasmid counts; not substitutes for a verified outcome definition |
+| Benchmark `start`/`end` | Infer as strings because nonnumeric entries exist; do not coerce silently |
+| Noncanonical `chr`, `start`, `stop` | Entirely missing despite the presence of those headers |
+
+The WGREST files contain neither sequence nor strand columns, nor `padj` or a validated binary repression-call column. The noncanonical file does contain `pvalue` and `padj`, but belongs to a different experiment and has no usable interval columns. Those statistics must not be transferred to native elements by assumption.
+
+## Native population and identifier semantics
+
+The following counts apply to each of the four WGREST tables:
+
+| Exact source category | Distinct `silencer` IDs | Construct rows | Complete coordinate rows | Nonmissing `log2FoldChange` rows |
+| --- | ---: | ---: | ---: | ---: |
+| `motif` | 8,436 | 42,180 | 42,180 | 37,256 |
+| `noMotif` | 4,430 | 22,150 | 22,150 | 19,502 |
+
+Every native element has five enhancer contexts: En02, En09, En11, En19, and En21. All complete native intervals have `end - start = 200`. The four cell tables agree on the 12,866 distinct native interval definitions.
+
+These counts do not establish a fully observed modeling matrix. A present element can have a missing measurement in one or more contexts. The shared missing-value totals shown above do not, by themselves, prove that the same measurements are missing in every cell type. Usable K562/SK-N-SH overlap must be computed for an explicit eligibility/context definition.
+
+Do not use a substring match on `motif` to define the canonical native set: categories such as `motif,maf1` and `motif,rare` belong to other source populations. Do not treat construct rows as independent native-element counts.
+
+## Published sequence supplement
+
+| Property | Observed value |
+| --- | --- |
+| Source | Publisher's Table S2, associated with DOI 10.1016/j.xgen.2022.100234 |
+| Local archive | [Table_S2_publisher.zip](raw/assembly_check/Table_S2_publisher.zip) |
+| Archive size | 1,470,375 bytes |
+| Inspected member | `xgen_100234_mmc03.tsv` |
+| Member size | 6,475,283 bytes of uncompressed TSV |
+| Columns | `oligo_name`, `sequence`, `library` |
+| Total rows | 26,682 |
+| `WG_REST` rows | 24,000 |
+| `benchmark` rows | 1,687 |
+| `non_canonical` rows | 995 |
+
+Oligo names recur across libraries. The assembly audit filters `library == "WG_REST"` before joining names; that subset has unique oligo names. A join across all libraries fails the intended one-to-one relationship and is not an appropriate workaround.
+
+| Native set | GEO elements | Direct names matched to WG_REST oligos | Still unmatched |
+| --- | ---: | ---: | ---: |
+| Canonical | 8,436 | 5,362 | 3,074 |
+| No-motif | 4,430 | 4,430 | 0 |
+| Combined | 12,866 | 9,792 | 3,074 |
+
+All 9,792 directly matched sequences are 200 bp. The unmatched canonical names are retained as unresolved identifiers. No sequence was fabricated, no alias was guessed, and no expected population count was lowered to remove them.
+
+## Assembly evidence cache
+
+The audit selects the first directly matched native interval by ascending position within each available project/chromosome group, before querying the references. This yields 24 canonical and 23 no-motif samples, spanning the available chromosome groups.
+
+| Candidate assembly | Exact full-sequence matches | Diagnostic start −1 matches | Diagnostic start +1 matches |
+| --- | ---: | ---: | ---: |
+| hg19 | 47/47 | 0/47 | 0/47 |
+| hg38 | 10/47 | 1/47 | 0/47 |
+
+Every hg19 match is forward-oriented. The result supports hg19 zero-based, half-open native intervals. Ten loci happen to match both builds at the same numbers and do not discriminate the assemblies. The one shifted hg38 match is a diagnostic observation, not a rule to shift every source interval.
+
+Each file under `raw/assembly_check/ucsc/` records a request of the form:
+
+```text
+https://api.genome.ucsc.edu/getData/sequence?genome=<assembly>;chrom=<chromosome>;start=<source_start_minus_one>;end=<source_end_plus_one>
+```
+
+This is a URL pattern, not a fabricated observed response. Actual URLs are recorded individually in the ledger and comparison CSV. The audit checks the response assembly, chromosome, start, end, and 202-base sequence length against each request before comparing the inner 200 bases. It compares both DNA orientations and diagnostic adjacent windows.
+
+The cache comprises 94 small JSON responses rather than downloaded reference genomes. For the underlying interface, see the [UCSC API coordinate documentation](https://genome.ucsc.edu/goldenPath/help/api.html).
+
+**Scope of the conclusion:** source-assembly identification for the sampled native populations. It does not validate all 12,866 genomic sequences, resolve the 3,074 unmatched canonical IDs, establish variant-coordinate builds, verify motif placement, or perform hg19 → hg38 conversion.
+
+## Acquisition failures and content validation
+
+| Event | Observed response | Resolution / retained evidence |
+| --- | --- | --- |
+| Initial sandbox access to NCBI/UCSC | Host-resolution errors | Authorized network retries succeeded; errors were reported |
+| GEO HTML access through the browsing tool | Browser/reCAPTCHA response | Direct text/directory retrieval supplied the discovery metadata |
+| PMC Table S2 endpoint | HTTP response containing 1,817 bytes of HTML, saved as `mmc3.zip` | Retained as failure evidence; not used as sequence input |
+| Publisher article page through the browsing tool | HTTP 403 | The separate publisher supplement URL succeeded |
+| Publisher Table S2 download | Valid 1,470,375-byte ZIP | Opened, schema inspected, and used in the assembly audit |
+
+The failed PMC response is deliberately distinguishable from the valid archive. Do not overwrite it with a successful download while keeping its original hash record. A future replacement must have its own path and provenance history.
+
+## Pending inputs and configured locations
+
+**Configured paths express expectations, not acquired files.** The following inputs are not present as completed production inputs in the current catalog.
+
+| Input | Intended location or source | Status / prerequisite |
+| --- | --- | --- |
+| Prepared MPRA table | `data/raw/mpra.tsv` is the current default `MPRA_PATH`; explicit paths can be supplied | Not produced; do not confuse this conventional path with the original GEO tables |
+| Full matched element FASTA | `data/processed/elements.fasta` | Not produced |
+| REST MEME matrix | `data/raw/MA0138.2.meme` | Not downloaded |
+| Native hg19 → hg38 chain | Must be explicitly selected and recorded | Not configured/downloaded by the current target-chain mapping |
+| hg38 → rheMac10 | `data/raw/chains/hg38ToRheMac10.over.chain.gz` | Expected path only |
+| hg38 → mm39 | `data/raw/chains/hg38ToMm39.over.chain.gz` | Expected path only |
+| hg38 → canFam6 | `data/raw/chains/hg38ToCanFam6.over.chain.gz` | Expected path only |
+| hg38 → bosTau9 | `data/raw/chains/hg38ToBosTau9.over.chain.gz` | Expected path only |
+| hg38 → monDom5 | `data/raw/chains/hg38ToMonDom5.over.chain.gz` | Expected path only |
+| Target FASTAs | `data/raw/genomes/{assembly}.fa` | Not downloaded |
+| Human hg38 `.2bit` | To be specified in the manual genome acquisition workflow | Not downloaded |
+| phyloP / phastCons | `BIGWIG_URLS` currently contains unset entries | Track identity and hg38 compatibility must be verified; use remote byte ranges |
+| Table S11 and other required supplements | Primary paper supplement endpoints | Not acquired during the assembly task |
+| ENCODE occupancy data | Accessions must be verified from the relevant source tables | No completed occupancy feature input |
+| `duoREST` reference checkout | Proposed gitignored `vendor/` directory | Not cloned; only selected remote source files were read |
+| Companion GSE212253 data | Original project plan | Not downloaded in the current workflow |
+
+The [Week 1 guide](../data-README.md) defines the remaining acquisition sequence and validation requirements. No genome-download target or six-check validation target is implemented yet.
+
+## Provenance contract
+
+### Required fields and meanings
+
+| Field | Meaning | Important qualification |
+| --- | --- | --- |
+| File | Repository-relative path to the acquired bytes | Archive members are identified through their parent unless separately materialized |
+| Source URL | Exact requested source, including query parameters | A similarly named file at another URL is a different source identity |
+| Downloaded UTC | Completion timestamp in UTC | Not the publisher's creation date or a later cache-read time |
+| Size | Actual local file length in bytes | Not an approximate human-readable directory size |
+| MD5 | Locally computed identity digest | Not evidence of a publisher-checksum match unless explicitly compared |
+
+No upstream MD5 comparison is claimed for the current downloads. Hashes make later file changes detectable against the recorded ledger; they do not independently establish biological validity or publisher authenticity.
+
+### Small downloader behavior
+
+[`download_small_file`](../src/downloads.py) performs no network operation at import time. Its default is cache-only (`fetch=False`), with a 10,000,000-byte cap. An explicit cap may be supplied up to 100,000,000 bytes. It requires HTTPS and a destination below the repository's `data/` directory.
+
+For an existing file, it requires a ledger row matching the path, source URL, and current local MD5. A changed or unrecorded cache raises an error. For a new file, it uses a temporary `.part` path, checks transfer success and size, records a local digest, moves the completed file to its destination, and appends a row internally. It does not provide resumable whole-genome transfers or validate every possible file format; callers must validate the content they requested.
+
+### Maintaining this document
+
+- Preserve every existing acquisition row. Corrections to interpretation belong in explanatory prose or a new record, not altered historical hashes or timestamps.
+- Keep original source bytes separate from derived data.
+- Record every new actual file/response acquired by the supported downloader.
+- Keep a usable ledger table at the end: the downloader appends rows to the end of this file.
+- Do not append prose beneath the final open ledger table without first arranging a suitable table for future rows.
+- Keep local raw payloads ignored. This README and other documentation can be versioned without adding the data files.
+- Use `git status --short`, `git diff --cached --name-only`, and `git check-ignore` before a handoff; do not force-add ignored datasets.
+
+## Historical planning inventory
+
+The original planning tables are retained below so their existing rows remain unchanged. Blank cells are historical placeholders, **not evidence of completed downloads**. The current catalog and observed download ledgers take precedence for acquisition status.
+
+<details>
+<summary>Original source, remote-track, and target-genome planning notes</summary>
 
 No data files are committed to this repository. This file is the record of what was
 downloaded, from where, and when. Fill a row the moment you download something; a file
 whose provenance you cannot reconstruct in December is a file you cannot put in the paper.
 
-## Inputs
+### Inputs
 
 | File | Source | URL | Downloaded | Notes |
 | --- | --- | --- | --- | --- |
@@ -16,7 +310,7 @@ whose provenance you cannot reconstruct in December is a file you cannot put in 
 | | JASPAR | https://jaspar.elixir.no/matrix/MA0138.2 | | REST profile, MEME format |
 | | ENCODE | https://www.encodeproject.org | | REST, RCOR1, SIN3A, EHMT2 in K562 |
 
-## Queried remotely, not downloaded
+### Queried remotely, not downloaded
 
 phyloP and phastCons bigWigs are read over HTTP by byte range rather than downloaded. The
 genome-wide files run to several gigabytes each and only the 8,436 motif windows are needed.
@@ -26,7 +320,7 @@ genome-wide files run to several gigabytes each and only the 8,436 motif windows
 | phyloP | | Confirm exact file name from the UCSC directory listing |
 | phastCons | | |
 
-## Target genomes
+### Target genomes
 
 | Species | Assembly | Downloaded | Size |
 | --- | --- | --- | --- |
@@ -35,6 +329,8 @@ genome-wide files run to several gigabytes each and only the 8,436 motif windows
 | Dog | | | |
 | Cow | | | |
 | Opossum | | | |
+
+</details>
 
 ## Phase A discovery downloads
 
