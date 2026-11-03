@@ -33,6 +33,14 @@ otherwise those checks skip. Other tests require no executables or network acces
 All default paths derive from the location of `src/config.py`, independently of
 the working directory. Nothing downloads data automatically.
 
+**Assembly resolved: the raw GEO native-element intervals use hg19.** Keep
+`GEO_NATIVE_GENOME_BUILD = "hg19"` separate from `GENOME_BUILD = "hg38"`, the
+project's analysis target. Directly treating the GEO interval numbers as hg38
+would query the wrong sequence at many loci. The source records have not been
+converted; conversion and sequence validation must precede any hg38-based query.
+This conclusion applies to the canonical (`motif`) and contrast (`noMotif`)
+native sets, not automatically to variant rows or the other libraries.
+
 1. Put the verified MPRA file at `MPRA_PATH` (default `data/raw/mpra.tsv`), or pass
    its path to `load_mpra`. Record provenance in `data/README.md`.
 2. Fill `MPRA_COLUMNS` with canonical-to-source headers for `element_id` and
@@ -42,12 +50,43 @@ the working directory. Nothing downloads data automatically.
    `MPRA_COLUMNS`. File delimiter is `MPRA_SEPARATOR`.
 3. Map optional `chrom`, `start`, `end`, and `strand` together if available, or
    join independently verified coordinates by element ID before genomic queries.
-   Coordinates must already be zero-based, half-open hg38 intervals. Sequence
+   For hg38 workflows, coordinates must first be converted from the native GEO
+   hg19 intervals and validated as zero-based, half-open hg38 intervals. Sequence
    orientation must be explicitly `+` or `-`; the loader never guesses it.
 4. Supply the existing JASPAR MA0138.2 **MEME-format** file at `MOTIF_PATH`, and
    existing chain/genome files at the configured paths or explicit function paths.
 5. Fill `BIGWIG_URLS` with verified hg38 phyloP and phastCons HTTP(S) URLs and
    record the chosen track versions in `data/README.md`. No track is assumed.
+
+### Reproduce the source-assembly audit
+
+```bash
+make assembly-check
+# Only when evidence files are missing; requests small files, never full genomes:
+python -m src.assembly_check --fetch
+```
+
+The audit compares the published [Table S2 oligos](https://ars.els-cdn.com/content/image/1-s2.0-S2666979X22001926-mmc3.zip)
+with UCSC reference DNA at the unchanged GEO coordinates in both hg19 and hg38.
+One directly name-matched oligo is selected per chromosome and native project,
+by ascending position before looking at the reference sequences or activity.
+Full 200 bp exact equality is checked in both orientations, plus diagnostic
+one-base shifts. The 47 samples cover 24 canonical and 23 no-motif chromosome
+groups: **hg19 matches 47/47; hg38 matches 10/47** at the original coordinates.
+Every hg19 match is forward-oriented and none requires an offset. Ten unchanged
+regions match both builds; these are nondiscriminating, not contradictory results.
+
+All four cell tables have identical coordinate metadata for their 12,866 native
+elements. Table S2 contains direct name matches for 5,362 canonical elements and
+all 4,430 no-motif elements, each 200 bp long. The remaining 3,074 canonical names
+are left unresolved rather than remapped by guesswork. This is an assembly audit
+on a deterministic sample, not full-population sequence validation.
+
+Detailed output: `results/tables/coordinate_assembly.md` and
+`results/tables/coordinate_assembly_comparisons.csv`. Individual bounded UCSC
+responses are cached under `data/raw/assembly_check/ucsc/`; every downloaded
+file/response has append-only provenance in `data/README.md`. The default audit
+replays this cache without network access. No new dependencies are required.
 
 The loader requires exactly 8,436 unique 200 bp elements and one finite repression
 measurement per element/cell pair. It rejects missing cells, duplicates, inconsistent

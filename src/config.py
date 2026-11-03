@@ -26,7 +26,12 @@ MOTIF_SPAN = (91, 111)  # Zero-based, BOTH endpoints inclusive: 21 bases.
 M_VALUE = 20.86
 CELL_TYPES = ["GM12878", "HepG2", "K562", "SK-N-SH"]
 JASPAR_ID = "MA0138.2"
-GENOME_BUILD = "hg38"
+GENOME_BUILD = "hg38"  # Project analysis target; NOT the raw GEO native intervals.
+# Empirically resolved using full Table S2 oligos at unchanged GEO coordinates:
+# 47/47 stratified native oligos match hg19, versus 10/47 at hg38 coordinates.
+# Scope: project='motif' and 'noMotif'. Do not assume variant-coordinate assemblies.
+# Preserve source coordinates and explicitly lift/validate before hg38 workflows.
+GEO_NATIVE_GENOME_BUILD = "hg19"
 TARGET_SPECIES = {"rheMac10", "mm39", "canFam6", "bosTau9", "monDom5"}
 EXPECTED_ELEMENT_COUNT = 8436
 
