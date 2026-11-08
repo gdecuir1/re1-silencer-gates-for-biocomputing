@@ -70,7 +70,11 @@ def load_evidence() -> tuple[pd.DataFrame, pd.DataFrame]:
             if intervals["silencer"].duplicated().any() or intervals.isna().any().any():
                 raise ValueError(f"Ambiguous or missing interval metadata in {member}")
             if not (intervals["end"] - intervals["start"]).eq(200).all():
-                raise ValueError(f"Non-200 bp intervals in {member}")
+                invalid = intervals.loc[(intervals["end"] - intervals["start"]).ne(200)]
+                raise ValueError(
+                    f"Expected 200 bp intervals in {member}; invalid records:\n"
+                    + invalid.assign(width=invalid["end"] - invalid["start"]).to_csv(index=False)
+                )
             if reference is None:
                 reference = intervals
             else:

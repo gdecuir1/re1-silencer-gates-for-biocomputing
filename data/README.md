@@ -1,5 +1,108 @@
 # Data Catalog and Provenance Ledger
 
+## Week 2 motif-window coverage and mouse sequences — 2026-11-08
+
+The independent 21 bp motif-window track uses the same minMatch 0.5 as the element track. The sidecar accounts for **217 MAPPED + 15 UNDETERMINED + 158 ABSENT = 390**. The 15 UNDETERMINED cases comprise ten element-only and five motif-only lifts; the latter policy was explicitly approved. All 15 are excluded for mouse downstream and absent from the FASTA. ABSENT denotes an alignment-based candidate loss, not a confirmed biological absence.
+
+The FASTA contains **217** oriented mm39 element sequences with 15 bp padding on each side. **60** MAPPED elements have original widths outside 160–240 bp. Sequence lengths are **136–3,285 bp**, with **zero** under 50 bp, **zero** containing N, and **zero** requiring chromosome-boundary padding clipping. No additional downloads were needed.
+
+See the [full report](../results/tables/pilot_mouse_orthologs.md), [data contract](../data-README.md#motif-window-coverage-and-ortholog-fasta), and [reproduction evidence](../results/tables/pilot_mouse_orthologs_reproducibility.json). Two real `make pilot-orthologs` runs produced 47 byte-identical artifacts and identical printed output.
+
+New derived files (SHA-256; source identities are recorded in the report and inputs.json):
+
+| Derived file | SHA-256 |
+| --- | --- |
+| `data/processed/pilot_mouse/orthologs.mm39.fa` | `5f8092ad6a5a38a91bf918a61ee7149682530b7ffb34683eb6ba368b01b6d892` |
+| `data/processed/pilot_mouse/orthologs.mm39.csv` | `85117ff6a52bae9c6e4e40b9a3b176034b2e83d035a6bc02551650d953a10180` |
+| `data/processed/pilot_mouse/motif_window/input.hg38.bed` | `74639edaa17f9ee18b23b92f0fc76360a1a80424eb689d68321a4d5dbb684c42` |
+| `data/processed/pilot_mouse/motif_window/liftOver.log` | `3ba5adda83a5eb97ffdb4a9cdd71188c9cb322a664889816946c335adf409c0b` |
+| `data/processed/pilot_mouse/motif_window/lifted.mm39.bed` | `b4369aac59b834755553d13a5431341dbc0e5637abbdcd81edfa991908023efa` |
+| `data/processed/pilot_mouse/motif_window/unmapped.hg38.bed` | `d9ee73956a21773767969436850c54ad12c68bc89aff3d2855c8cb50c3930781` |
+| `data/processed/pilot_mouse/ortholog_extraction/element_track/liftOver.log` | `079308041fdb4dee3a0fffeac6eadbdfb159cc4893665f04b056c8dc7f1b1689` |
+| `data/processed/pilot_mouse/ortholog_extraction/element_track/lifted.mm39.bed` | `bf898c197ead2ad7c66c6b0a4bb939c679b27cc5302f1449cc324230894d891d` |
+| `data/processed/pilot_mouse/ortholog_extraction/element_track/unmapped.hg38.bed` | `a7f7097fb1e8a227269cd267665e050e54ad4297edf4b2f337ea0f31ed7bf612` |
+| `data/processed/pilot_mouse/ortholog_extraction/expected_pilot.hg38.bed` | `0b52b57f2676d476a8a4a131a66ecc2cff187dbb2f27a8773b37b474b16e5930` |
+| `data/processed/pilot_mouse/ortholog_extraction/inputs.json` | `3d79eb85f22b2f8dd74d7e8f0caa65e49fe04adafae912d00e3683e566d7573f` |
+| `data/processed/pilot_mouse/ortholog_extraction/padded_elements.mm39.bed` | `8e53b1e269f2db6b8222251361bd5252abac57fe13cb8540fdc952c6b0330bcb` |
+| `data/processed/pilot_mouse/ortholog_extraction/twoBitToFa.log` | `d3c8a825e386e15b5af05748d96690cf8a0356eea4a73057d0b1882e9172e111` |
+
+Existing provenance and derivation snapshots below are preserved unchanged.
+
+
+## Week 2 chr8 pilot and mouse lift — 2026-11-08
+
+The pilot is now published: **390 canonical chr8 elements**, all 200 bp, with **10/10 exact hg38 regressions**. Genome dependencies are scoped by consumer: hg38 for the pilot; hg38/mm39 for the mouse lift; hg38 plus all five targets for the future multi-species step. The integrity verifier itself is unchanged. This work did not inspect or change bosTau9 or monDom5 downloads.
+
+The measured mouse sweep selected **minMatch 0.5**: **227 mapped and 163 unmapped**, with 64 mapped spans flagged for >20% length deviation. All outcomes remain in the audit. The new hg38-to-mm39 chain's source URL, UTC completion timestamp, byte size, and local MD5 were appended automatically to the download ledger below. No old provenance row was edited.
+
+See the [pilot report](../results/tables/pilot_setup.md), [mouse sweep and failure reasons](../results/tables/pilot_mouse_lift.md), and [two-run reproduction evidence](../results/tables/pilot_mouse_reproducibility.json). All 33 artifacts and printed output were identical across two real-data runs.
+
+Derived-file inventory for this run (SHA-256, not download MD5):
+
+| Derived file | SHA-256 |
+| --- | --- |
+| `data/processed/pilot_chr8.bed` | `0b52b57f2676d476a8a4a131a66ecc2cff187dbb2f27a8773b37b474b16e5930` |
+| `data/processed/pilot_mouse/expected_pilot.hg38.bed` | `0b52b57f2676d476a8a4a131a66ecc2cff187dbb2f27a8773b37b474b16e5930` |
+| `data/processed/pilot_mouse/final/element_audit.csv` | `fa26d21cda12f1ece4f2a93bc1d56bc80e1d5818e04b28552bf24e133b11b826` |
+| `data/processed/pilot_mouse/final/liftOver.log` | `dc92bd0e2672c4302ab84d71ff3ea3cd0f44fdc6758069e88d0534cf5b037a58` |
+| `data/processed/pilot_mouse/final/lifted.mm39.bed` | `bf898c197ead2ad7c66c6b0a4bb939c679b27cc5302f1449cc324230894d891d` |
+| `data/processed/pilot_mouse/final/unmapped.hg38.bed` | `a7f7097fb1e8a227269cd267665e050e54ad4297edf4b2f337ea0f31ed7bf612` |
+| `data/processed/pilot_mouse/minmatch_0.1/element_audit.csv` | `bebeea11f033f33143a22280dbc9c2bfe7fb6b5b68d5c578fc89a9a86afec3fa` |
+| `data/processed/pilot_mouse/minmatch_0.1/liftOver.log` | `570e970856baaca3f4b875f33c6f98fd604dfba3a71f2ae3e72c78c1b7035ef5` |
+| `data/processed/pilot_mouse/minmatch_0.1/lifted.mm39.bed` | `f4e25d74c471ae7e4facc83587d97cd051d25ba7b3289f1bc5e209593b14517f` |
+| `data/processed/pilot_mouse/minmatch_0.1/unmapped.hg38.bed` | `8b1a151284ee67bc730f030c7c0eda537d47d9789993a70d64fdb92d2adca0d5` |
+| `data/processed/pilot_mouse/minmatch_0.2/element_audit.csv` | `28be399d6438b49c83ed3124e8dc31f85a0d18f771f2ce5b62a5605340340e96` |
+| `data/processed/pilot_mouse/minmatch_0.2/liftOver.log` | `2497fc11ccafde916113b0c53425ae3a5154be20dc9efe88f83f91739b7c2e12` |
+| `data/processed/pilot_mouse/minmatch_0.2/lifted.mm39.bed` | `da8a34e4e2a379a48fc787566dda61be363ae87714b955874d23c2aebc73fbc3` |
+| `data/processed/pilot_mouse/minmatch_0.2/unmapped.hg38.bed` | `648f6ce258523b007863b51949d36235829629fab0810b79449c56962dccf3aa` |
+| `data/processed/pilot_mouse/minmatch_0.5/element_audit.csv` | `fa26d21cda12f1ece4f2a93bc1d56bc80e1d5818e04b28552bf24e133b11b826` |
+| `data/processed/pilot_mouse/minmatch_0.5/liftOver.log` | `14c9c48efa8e337da68d059629e28a45ce04b4024ece8b275f27129cfd622139` |
+| `data/processed/pilot_mouse/minmatch_0.5/lifted.mm39.bed` | `bf898c197ead2ad7c66c6b0a4bb939c679b27cc5302f1449cc324230894d891d` |
+| `data/processed/pilot_mouse/minmatch_0.5/unmapped.hg38.bed` | `a7f7097fb1e8a227269cd267665e050e54ad4297edf4b2f337ea0f31ed7bf612` |
+| `data/processed/pilot_mouse/minmatch_0.95/element_audit.csv` | `112125dfabc1b5376294f0a23adfa6fe6899203aee127af89507872c651ab385` |
+| `data/processed/pilot_mouse/minmatch_0.95/liftOver.log` | `246bc3c1a8ab4ef1546f20014e2d687ac2e19d441e7bce44deb866be6ce545e2` |
+| `data/processed/pilot_mouse/minmatch_0.95/lifted.mm39.bed` | `bad9a9ff32e146c3569a2861952ff96fb85ab2a9e83e2f391ed45f483bb450e1` |
+| `data/processed/pilot_mouse/minmatch_0.95/unmapped.hg38.bed` | `77530c8d30cc55b0d5c5dc320f1c880cbaac0b21abdf7719a72713a9627b6f14` |
+| `data/processed/pilot_mouse/sweep.csv` | `890fd944414ad9cbae94d177bebead874e2cadba3ffe3c7c930be24b720b017e` |
+| `data/processed/pilot_setup/hg38.twoBitInfo.log` | `912f6471944218f892fbf282321c1f77fd043818aa87ddb74ad1a48827691396` |
+| `data/processed/pilot_setup/hg38.twoBitInfo.txt` | `d06fcd768c9451398eb8e37d486c94e464efc5aca4991af4b05a423dcce3cd6f` |
+| `data/processed/pilot_setup/mm39.twoBitInfo.log` | `91db5b9198a6e978b6aad86838ad7707a6337569627db90e6cf16aa8bd065493` |
+| `data/processed/pilot_setup/mm39.twoBitInfo.txt` | `90be49c9da524f66246749e3d8fe41f9a124d6cc5989bdd6640babcab76de894` |
+| `data/processed/pilot_setup/regression.csv` | `3d48d39e18d7ff61c44d4218e9f4db340b6843556742b61979234db8355ffc13` |
+| `data/processed/pilot_setup/sample.bed` | `6afefca381cc62b4149c8aff59a9a08da3bd5a01677af4c11da50e1e307d51b2` |
+| `data/processed/pilot_setup/sample.fa` | `a96eb8b86f2b6403a340bb5485777fa4e95912133a3949623cfb90a6b4e3f45c` |
+| `data/processed/pilot_setup/twoBitToFa.log` | `a5ebb55ca8bc95393f14b5fc9af9ff46fa980bc7de31579a5dbb47a54475c081` |
+
+These are derivations, not downloads. Existing rows below remain dated historical snapshots.
+
+
+## Coordinate conversion update — 2026-11-08
+
+This update supersedes older conversion/name-reconciliation status statements in the **2026-11-03 catalog snapshot below**. All existing catalog and provenance rows are retained verbatim. New downloads append at the end of the existing ledger.
+
+**12,815 verified, 47 lifted with sequence mismatches, and 4 failed lifts out of 12,866 inputs.** All 12,866 library sequences were resolved by exact names or explicit publisher aliases. No adapter trimming was needed. Downstream coordinates come from `data/processed/elements_hg38.csv`, with source hg19 coordinates retained only for traceability. See the [operating guide](../data-README.md#verified-hg38-handoff) and [complete report](../results/tables/liftover_hg19_to_hg38.md).
+
+New reference acquisitions: `data/raw/hg19ToHg38.over.chain.gz`, `data/raw/repeats/hg19.rmsk.sql`, `data/raw/repeats/hg19.rmsk.txt.gz`, `data/raw/genomes/hg38.md5sum.txt`, and `data/raw/genomes/hg38.2bit`. Their exact source URLs, timestamps, sizes, and local MD5s are appended below. hg38's local MD5 also matches UCSC's published digest. The hg19 database `md5sum.txt` request returned HTTP 404; no upstream checksum verification is claimed for RepeatMasker. Initial sandboxed requests failed DNS resolution and were retried with approved network access.
+
+Generated data inventory (not downloads; derived by `make lift` from the recorded source inputs):
+
+| Generated file | MD5 after verified replay |
+| --- | --- |
+| `data/processed/elements_hg38.csv` | `ea9e93a9c9a831cac9c134ee9cfb3474` |
+| `data/processed/liftover_hg19_to_hg38/element_audit.csv` | `637fb18a5f003e3f01d8f70e59e74122` |
+| `data/processed/liftover_hg19_to_hg38/input.hg19.bed` | `e0406ca2118970454dc8fdebf73dd0a1` |
+| `data/processed/liftover_hg19_to_hg38/input_elements.csv` | `52a8e5087eef6c0cb304e43c12ded227` |
+| `data/processed/liftover_hg19_to_hg38/liftOver.log` | `c3807eb996f640a33f5568e4b0689bb2` |
+| `data/processed/liftover_hg19_to_hg38/lifted.hg38.bed` | `83e5f99992e94aed4737da435933f70e` |
+| `data/processed/liftover_hg19_to_hg38/lifted.hg38.fa` | `e11dc983f0021c15183a56d2a9152a4a` |
+| `data/processed/liftover_hg19_to_hg38/twoBitToFa.log` | `443ef84e1ec966fcf1dafe64023c0463` |
+| `data/processed/liftover_hg19_to_hg38/unmapped.hg19.bed` | `41a56f03508f55db8a842e10aa168f0e` |
+
+The full per-element audit preserves failures and mismatches. Download ledger records are immutable; derived-file hashes describe this conversion snapshot. A future change to input data or code requires a new run and a new dated inventory, not rewriting these rows.
+
+---
+
+
 **Authoritative record of local source files, acquisition evidence, and download provenance.**
 
 [Main operating guide](../README.md) · [Research rationale](../README%20%282%29.md) · [Week 1 workflow](../data-README.md)
@@ -450,3 +553,22 @@ and assembly checked against the request. All original provenance rows are retai
 | `data/raw/assembly_check/ucsc/hg38_chr9_2015274_2015476.json` | https://api.genome.ucsc.edu/getData/sequence?genome=hg38;chrom=chr9;start=2015274;end=2015476 | 2026-11-03T15:56:22+00:00 | 357 | `b4721322f31c6fe91650d4f06165317b` |
 | `data/raw/assembly_check/ucsc/hg19_chrX_1368280_1368482.json` | https://api.genome.ucsc.edu/getData/sequence?genome=hg19;chrom=chrX;start=1368280;end=1368482 | 2026-11-03T15:56:24+00:00 | 357 | `3dc40b31c61524c8b5833e4e221963ef` |
 | `data/raw/assembly_check/ucsc/hg38_chrX_1368280_1368482.json` | https://api.genome.ucsc.edu/getData/sequence?genome=hg38;chrom=chrX;start=1368280;end=1368482 | 2026-11-03T15:56:25+00:00 | 357 | `00c712c40778ae9ff1f6a74d4759e662` |
+| `data/raw/hg19ToHg38.over.chain.gz` | https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz | 2026-11-08T22:14:33+00:00 | 227698 | `35887f73fe5e2231656504d1f6430900` |
+| `data/raw/repeats/hg19.rmsk.sql` | https://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/rmsk.sql | 2026-11-08T22:14:34+00:00 | 2097 | `d379a22c7eacafd27c9c47a29ef45ed9` |
+| `data/raw/repeats/hg19.rmsk.txt.gz` | https://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/rmsk.txt.gz | 2026-11-08T22:20:37+00:00 | 148359433 | `bfed7e64af68efec90b9d419d98a2379` |
+| `data/raw/genomes/hg38.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/md5sum.txt | 2026-11-08T22:20:38+00:00 | 720 | `57face159b2845e2f58601d0050db7f7` |
+| `data/raw/genomes/hg38.2bit` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit | 2026-11-08T22:25:31+00:00 | 835393456 | `dcc3ea27079aa6dc3f9deccd7275e0f8` |
+| `data/raw/genomes/verification/hg38.chrom.sizes` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes | 2026-11-08T22:38:07+00:00 | 11672 | `c42e9f75fff906c6a7143cb2fac86602` |
+| `data/raw/genomes/verification/hg38.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/md5sum.txt | 2026-11-08T22:38:07+00:00 | 720 | `57face159b2845e2f58601d0050db7f7` |
+| `data/raw/genomes/verification/rheMac10.chrom.sizes` | https://hgdownload.soe.ucsc.edu/goldenPath/rheMac10/bigZips/rheMac10.chrom.sizes | 2026-11-08T22:38:08+00:00 | 80592 | `d6e73c0c02e487ced58d5f74ffbe54d6` |
+| `data/raw/genomes/verification/rheMac10.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/rheMac10/bigZips/md5sum.txt | 2026-11-08T22:38:08+00:00 | 524 | `4f5ced12331a3b46b15c78354252815b` |
+| `data/raw/genomes/verification/mm39.chrom.sizes` | https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/mm39.chrom.sizes | 2026-11-08T22:38:08+00:00 | 1350 | `967c609a714df35c86a4f52ac85db377` |
+| `data/raw/genomes/verification/mm39.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/md5sum.txt | 2026-11-08T22:38:09+00:00 | 657 | `43249e4950c03c6b59bb8ef4d9ec7842` |
+| `data/raw/genomes/verification/canFam6.chrom.sizes` | https://hgdownload.soe.ucsc.edu/goldenPath/canFam6/bigZips/canFam6.chrom.sizes | 2026-11-08T22:38:09+00:00 | 3369 | `460096e268ee9f66625e3cd13319bffc` |
+| `data/raw/genomes/verification/canFam6.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/canFam6/bigZips/md5sum.txt | 2026-11-08T22:38:09+00:00 | 630 | `d3cb79a221b39e348d0e99291bf59e19` |
+| `data/raw/genomes/verification/bosTau9.chrom.sizes` | https://hgdownload.soe.ucsc.edu/goldenPath/bosTau9/bigZips/bosTau9.chrom.sizes | 2026-11-08T22:38:10+00:00 | 59089 | `6522c148be975984d454d7c47f39f105` |
+| `data/raw/genomes/verification/bosTau9.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/bosTau9/bigZips/md5sum.txt | 2026-11-08T22:38:10+00:00 | 692 | `640c0a34f58434443426a4f0ef518d89` |
+| `data/raw/genomes/verification/monDom5.chrom.sizes` | https://hgdownload.soe.ucsc.edu/goldenPath/monDom5/bigZips/monDom5.chrom.sizes | 2026-11-08T22:38:10+00:00 | 161 | `2f14bb7a9c6f8bd9c62600895288e83e` |
+| `data/raw/genomes/verification/monDom5.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/monDom5/bigZips/md5sum.txt | 2026-11-08T22:38:11+00:00 | 361 | `a8acb0462e6dd97ff6c7eef628438aee` |
+| `data/raw/tools/twoBitInfo` | https://hgdownload.soe.ucsc.edu/admin/exe/macOSX.arm64/twoBitInfo | 2026-11-08T22:38:17+00:00 | 5813896 | `d601d883cbe63fedd2b85d33da2822ae` |
+| `data/raw/chains/hg38ToMm39.over.chain.gz` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToMm39.over.chain.gz | 2026-11-08T22:56:37+00:00 | 73017320 | `5256809040d3ac932a53d16c7b3979b6` |

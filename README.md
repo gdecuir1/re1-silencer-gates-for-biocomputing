@@ -4,9 +4,9 @@
 
 Gabrielle DeCuir and Vrinda Sehgal · Johns Hopkins Applied Comparative Genomics · Fall 2026
 
-**Current stage:** data discovery and source-assembly verification. The processing scaffold is implemented; the full Week 1 validation harness and scientific models are not yet implemented. Documentation status: **2026-11-03**.
+**Current stage:** sequence-verified hg38 coordinate handoff. The processing scaffold is implemented; the full Week 1 validation harness and scientific models are not yet implemented. Documentation status: **2026-11-08**.
 
-> **Read this before using any coordinates.** The native `motif` and `noMotif` intervals in GEO GSE196171 use **hg19**. The project's intended analysis assembly is **hg38**. These are separate settings, and changing an assembly label does not convert coordinates. The original source intervals have not yet been lifted to hg38.
+> **Read this before using any coordinates.** The native `motif` and `noMotif` intervals in GEO GSE196171 use **hg19**. The project's intended analysis assembly is **hg38**. These are separate settings, and changing an assembly label does not convert coordinates. Conversion is complete: **12,815 verified, 47 lifted with sequence mismatches, and 4 failed lifts out of 12,866 inputs**. Downstream genomic work must use `data/processed/elements_hg38.csv`; the raw hg19 columns are archival evidence.
 
 ## Contents
 
@@ -62,7 +62,7 @@ Local evidence reports are generated artifacts, not guaranteed to exist in a fre
 | --- | --- | --- |
 | GEO discovery | Completed | Native construct-level activity and interval columns were inspected directly |
 | Native source assembly | Resolved empirically as hg19 | Based on a deterministic sequence sample; not an all-element reference audit |
-| hg19 → hg38 conversion | Not performed | Required before applying the configured hg38 downstream workflows |
+| hg19 → hg38 conversion | Complete, with exact sequence verification | 12,815 retained; all exclusions remain in the audit |
 | Generic MPRA loading and validation | Implemented | Raw GEO tables still require scientifically justified preparation |
 | FIMO, liftOver, bedtools, conservation wrappers | Implemented | Production inputs and several interpretation choices remain outstanding |
 | Ortholog-state classification | Implemented and tested | Classifies supplied states; does not infer states from missing data |
@@ -82,8 +82,8 @@ Local evidence reports are generated artifacts, not guaranteed to exist in a fre
 | Distinct native no-motif contrast elements | 4,430 | Exact `project == "noMotif"` subset |
 | Enhancer contexts per native element | 5 | En02, En09, En11, En19, En21 |
 | Native coordinate definitions shared across cell tables | 12,866 | All four cell tables agree on these interval records |
-| Direct Table S2 sequence-name matches | 9,792 | 5,362 canonical + 4,430 no-motif; all matched sequences are 200 bp |
-| Canonical names still unreconciled with Table S2 | 3,074 | Not imputed and not treated as reference-sequence mismatches |
+| Direct Table S2 sequence-name matches | 9,792 | Plus 3,074 explicit aliases: all 12,866 library sequences are 200 bp |
+| Additional Table S2 explicit-alias matches | 3,074 | Parenthesized semicolon-separated names; each native ID maps uniquely |
 | Exact reference matches in the assembly audit | hg19: 47/47; hg38: 10/47 | Full 200 bp sequences at unchanged interval numbers |
 
 These are acquisition and validation findings. They are not conservation effects, predictive performance estimates, or experimental gate-quality results.
@@ -123,13 +123,15 @@ Python dependencies and command-line genomics packages are listed in [environmen
 | `fimo` | Motif scoring | MEME package in the environment |
 | `cd-hit-est` | DNA clustering | CD-HIT package in the environment |
 | `liftOver` | Interval conversion | UCSC liftOver package in the environment |
+| `twoBitToFa` | Exact interval extraction from hg38 .2bit | UCSC twoBitToFa package in the environment |
+| `twoBitInfo` | Sequence lengths/counts for the pilot genome gate | Environment package or recorded local UCSC utility |
 | `bedtools` | Oriented reference-sequence extraction | bedtools package in the environment |
 | `curl` | Explicit small-file downloads | Available on the system PATH; not declared as a Conda dependency here |
 | `twoBitToFa` | Planned genome extraction workflow | UCSC package listed in the environment; acquisition workflow not yet implemented |
 | `gkmtrain`, `gkmpredict` | Future gapped k-mer model | Separate lsgkm installation; model function is currently a stub |
 
 ```bash
-command -v fimo cd-hit-est liftOver bedtools curl
+command -v fimo cd-hit-est liftOver twoBitToFa bedtools curl
 ```
 
 For a different configured interpreter, use `make test lint PYTHON=python`. A local `.venv` may exist in a developer's checkout, but it is ignored and is not a portable replacement for `environment.yml`.
@@ -142,6 +144,11 @@ For a different configured interpreter, use `make test lint PYTHON=python`. A lo
 | `make test` | Run pytest | No | None required by the tests |
 | `make lint` | Run Ruff | No | None |
 | `make clean` | Remove pytest/Ruff caches and Python caches under source, tests, and notebooks | No | None |
+| `make pilot` | Verify hg38 only, then publish the canonical chr8 pilot after a seeded 10-element exact sequence check | Yes | None |
+| `make pilot-mouse` | Verify hg38/mm39, run the four-threshold mouse sweep, and preserve final mapped/unmapped records | Yes | None |
+| `make pilot-orthologs` | Lift motif windows independently, retain three-way mapping calls, and extract padded jointly mapped mouse sequences | Yes | None |
+| `make lift` | Convert native hg19 intervals and verify every lifted sequence against hg38; write audit, report, and verified CSV | Yes | None |
+| `python -m src.fetch_lift_inputs --genome` | Explicitly fetch the conversion chain, hg19 RepeatMasker, checksum manifest, and full hg38 reference | No | Explicit; about 984 MB |
 | `make assembly-check` | Recompute the assembly evidence report from local inputs and cached UCSC responses | Yes | None |
 | `python -m src.assembly_check --fetch` | Obtain missing small assembly-evidence files and run the audit | GEO archive must already be present | Explicit, bounded requests |
 
@@ -170,6 +177,8 @@ The following names describe planned deliverables, not available commands: `make
 │   ├── config.py
 │   ├── _utils.py
 │   ├── downloads.py
+│   ├── lift.py                      Offline verified hg38 handoff
+│   ├── fetch_lift_inputs.py          Explicit resumable reference downloads
 │   ├── assembly_check.py
 │   ├── io_mpra.py
 │   ├── motifs.py
@@ -202,7 +211,11 @@ Under `data/` and `results/`, the active ignore policy allows README files and `
 | `CELL_TYPES` | GM12878, HepG2, K562, SK-N-SH | Canonical cell labels in prepared inputs |
 | `JASPAR_ID` | `MA0138.2` | Required REST matrix identifier by default |
 | `GENOME_BUILD` | `hg38` | Intended analysis target |
-| `GEO_NATIVE_GENOME_BUILD` | `hg19` | Empirically resolved assembly of the native source sets |
+| `GEO_NATIVE_GENOME_BUILD` / `SOURCE_BUILD` | `hg19` | Source-only archival coordinates |
+| `WORKING_BUILD` | `hg38` | Assembly of sequence-verified downstream elements |
+| `PILOT_CHROM` | `chr8` | Canonical-only Week 2 pilot; publication gated on hg38 and exact sampled DNA |
+| `MINMATCH_CROSS_SPECIES` | `0.5` | Measured chr8 mouse-sweep compromise; rationale recorded in config |
+| `HG38_ELEMENTS` | `data/processed/elements_hg38.csv` | Verified genomic handoff; contains both native populations |
 | `EXPECTED_ELEMENT_COUNT` | `8436` | Default loader expectation for the canonical set |
 | `TARGET_SPECIES` | rheMac10, mm39, canFam6, bosTau9, monDom5 | Cross-species target assemblies |
 
@@ -233,9 +246,16 @@ The downloaded GEO tables do **not** directly satisfy this contract: their IDs d
 | `MPRA_REPRESSION_COLUMNS` | Map each of the four cell types to its measurement column | Not used |
 | `MPRA_SEPARATOR` | Tab by default | Tab by default |
 
-Unset mappings deliberately fail. Do not populate them by renaming the raw construct ID to an element ID or treating `log2FoldChange` as fully validated repression. Enhancer-context handling, sequence reconciliation, missingness, sign, and assembly conversion must be established first.
+Unset mappings deliberately fail. Do not populate them by renaming the raw construct ID to an element ID or treating `log2FoldChange` as fully validated repression. Sequence reconciliation and assembly conversion are implemented in `src/lift.py`. Enhancer-context handling, missingness, and sign still need explicit policies.
 
 ## Assembly and coordinate conventions
+
+### Verified hg38 handoff
+
+Week 2 pilot setup is complete: **390 canonical chr8 elements**, with **10/10 sequence checks passed**. `make pilot` verifies hg38 only; `make pilot-mouse` verifies hg38 and mm39. The selected mouse minMatch of **0.5** lifts **227/390**, retaining all 163 failures. See the [operating guide](data-README.md#week-2-pilot-setup-and-mouse-lift), [pilot report](results/tables/pilot_setup.md), and [mouse sweep](results/tables/pilot_mouse_lift.md). The unfinished target genomes do not block these steps.
+
+The full conversion produced **12,815 verified, 47 lifted with sequence mismatches, and 4 failed lifts out of 12,866 inputs**. The retained population is 8,400 canonical elements and 4,415 no-motif elements. See the [conversion report](results/tables/liftover_hg19_to_hg38.md) and [operating instructions](data-README.md#verified-hg38-handoff). Source population expectations remain 8,436 and 4,430; the retained counts are smaller because every exclusion is explicitly audited. Do not change the original expected count to conceal attrition.
+
 
 ### Evidence for hg19
 
@@ -246,7 +266,7 @@ The audit joins native GEO intervals to the `WG_REST` library in Table S2, then 
 | hg19 | 47/47 | 0/47 | 0/47 |
 | hg38 | 10/47 | 1/47 | 0/47 |
 
-Every hg19 match is forward-oriented. The ten matches shared with hg38 are nondiscriminating regions, not evidence that the entire table can be read as hg38. The audit resolves the source assembly for the native sets, while full-population sequence checks and variant-coordinate provenance remain separate work.
+Every hg19 match is forward-oriented. The ten matches shared with hg38 are nondiscriminating regions, not evidence that the entire table can be read as hg38. The audit resolves the source assembly for the native sets, while the full mapped-population hg38 check is recorded in the conversion report; variant-coordinate provenance remains separate work.
 
 ### Coordinate systems must be translated explicitly
 
@@ -267,6 +287,11 @@ The assembly audit does not validate motif placement. The configured motif offse
 | Module / entry point | Input | Output / behavior | Boundary |
 | --- | --- | --- | --- |
 | [`downloads.download_small_file`](src/downloads.py) | HTTPS URL and destination below `data/` | Bounded download or provenance-checked cache | Explicit `fetch=True`; 10 MB default cap, maximum 100 MB; not a genome downloader |
+| [`pilot`](src/pilot.py) | Step-specific genome dependencies and verified hg38 CSV | Canonical chr8 BED, sampled sequence regression, report | No unused-genome checks or genome downloads |
+| [`pilot_orthologs`](src/pilot_orthologs.py) | Pilot, element/motif tracks, hg38/mm39, shared chain/minMatch | Padded FASTA, complete sidecar, motif-window coverage report | UNDETERMINED excludes mouse; MAPPED is not a motif-retention call |
+| [`pilot_mouse`](src/pilot_mouse.py) | Pilot BED, hg38/mm39, directional chain | Sweep table, mapped/unmapped BEDs, full failure audit | Mapping evidence only; no motif classification |
+| [`lift`](src/lift.py) | Native GEO metadata, Table S2 oligos, source-to-working chain, hg38 .2bit, hg19 RepeatMasker | Verified hg38 CSV, exhaustive audit, retained BED/FASTA/log files, Markdown report | Offline; exact full-200-bp matches only; default liftOver parameters |
+| [`fetch_lift_inputs`](src/fetch_lift_inputs.py) | Explicit download request | Resumable reference downloads and append-only provenance | Full hg38 requires `--genome`; publisher MD5 required |
 | [`assembly_check`](src/assembly_check.py) | GEO archive, Table S2, cached or requested UCSC windows | Markdown report and comparison CSV | Offline by default; native sequence sample only |
 | [`io_mpra.load_mpra`](src/io_mpra.py) | Local delimited file and explicit mappings | Validated tidy DataFrame | No subset selection, context aggregation, sign change, or imputation |
 | [`motifs.score_sequences`](src/motifs.py) | DNA FASTA and local MEME-format matrix | Best hit per sequence, retaining missing hits | No JASPAR download or genome extraction |
@@ -282,6 +307,8 @@ FIMO runs in text mode with a p-value threshold of 1 so weak best scores are not
 Conservation checks HTTP byte-range support before opening remote bigWigs. It uses actual per-base values for the 21 bp window, reports the number of covered bases, and leaves all-missing windows as missing. Missing coverage is not converted to zero conservation.
 
 ## Classification and missing evidence
+
+The current mouse pilot has a separate **mapping-availability** layer: **217 MAPPED, 15 UNDETERMINED, and 158 ABSENT**. Exactly the 217 MAPPED sequences are extracted with 15 bp padding. UNDETERMINED includes ten element-only and five motif-only lifts, and excludes mouse downstream. ABSENT is only an alignment-based candidate loss. These calls must not be substituted directly for the later motif/evolution states below. See the [coverage and extraction report](results/tables/pilot_mouse_orthologs.md) and [data contract](data-README.md#motif-window-coverage-and-ortholog-fasta).
 
 Each of the five target species must have an explicit state:
 
@@ -333,6 +360,8 @@ The following functions intentionally raise `NotImplementedError`:
 
 ## Testing and reproducibility
 
+The hg38 conversion passed **87 tests** on 2026-11-08 with the installed genomics tools. Two real-data `make lift` runs produced byte-identical results for all ten generated artifacts, including the Markdown report and verified CSV; hashes are recorded in `results/tables/liftover_hg19_to_hg38_reproducibility.json`.
+
 The last recorded implementation verification on 2026-11-03 passed **74 tests**, with Ruff clean. This is a historical verification result, not a substitute for rerunning checks after changes.
 
 | Test area | What it verifies |
@@ -358,14 +387,12 @@ Missing executables cause their integration tests to skip; a passing suite with 
 
 ## Remaining work and completion criteria
 
-The detailed sequence is in the [Week 1 guide](data-README.md). The immediate dependencies are:
+The detailed sequence is in the [Week 1 guide](data-README.md). The alias reconciliation and hg38 conversion are complete; see the [handoff guide](data-README.md#verified-hg38-handoff). Remaining work:
 
-1. Reconcile the 3,074 canonical sequence names without guessing aliases or introducing duplicates.
-2. Convert native hg19 intervals to hg38, preserving source IDs, original coordinates, failures, orientation, and sequence comparisons.
-3. Establish enhancer-context handling, complete/missing measurement policies, repression sign, and repression-call definitions.
-4. Acquire and verify the remaining small inputs; prepare the separately triggered genome-download workflow.
-5. Implement the six-check `src/validate.py` harness and `make validate`, with expected/observed values and explicit failures.
-6. Only after input validation, create real cross-species features, frozen folds, models, and candidate-ranking metrics.
+1. Establish enhancer-context handling, complete/missing measurement policies, repression sign, and repression-call definitions.
+2. Acquire and verify the remaining small inputs; prepare the separately triggered genome-download workflow.
+3. Implement the six-check `src/validate.py` harness and `make validate`, with expected/observed values and explicit failures.
+4. Only after input validation, create real cross-species features, frozen folds, models, and candidate-ranking metrics.
 
 Current code availability is not evidence that these steps have been run on the biological data.
 

@@ -32,8 +32,30 @@ GENOME_BUILD = "hg38"  # Project analysis target; NOT the raw GEO native interva
 # Scope: project='motif' and 'noMotif'. Do not assume variant-coordinate assemblies.
 # Preserve source coordinates and explicitly lift/validate before hg38 workflows.
 GEO_NATIVE_GENOME_BUILD = "hg19"
+# Explicit names used by the one-time, sequence-verified assembly conversion.
+SOURCE_BUILD = GEO_NATIVE_GENOME_BUILD
+WORKING_BUILD = GENOME_BUILD
+SOURCE_TO_WORKING_CHAIN = RAW_DIR / "hg19ToHg38.over.chain.gz"
+HG38_TWOBIT = RAW_DIR / "genomes" / "hg38.2bit"
+HG19_REPEATS = RAW_DIR / "repeats" / "hg19.rmsk.txt.gz"
+HG38_ELEMENTS = PROCESSED_DIR / "elements_hg38.csv"
 TARGET_SPECIES = {"rheMac10", "mm39", "canFam6", "bosTau9", "monDom5"}
 EXPECTED_ELEMENT_COUNT = 8436
+# Week 2 pilot: canonical elements only, using verified hg38 coordinates.
+PILOT_CHROM = "chr8"
+# chr8 sweep: 0.5 maps 227; 0.2/0.1 add mostly >20%-distorted spans (only 2 stable gains).
+MINMATCH_CROSS_SPECIES = 0.5
+MINMATCH_CROSS_SPECIES_RATIONALE = (
+    "Recommend 0.5 for this mouse pilot: 227/390 map (58.21%), with 163 spans "
+    "within 160–240 bp and 64 outside. At 0.95 only 63 map (56 within the band). "
+    "Lowering 0.5 to 0.2 gains 21 IDs but loses one as duplicated (net +20), "
+    "with only two additional in-band spans, "
+    "while the out-of-band count rises from 64 to 82. Lowering 0.2 to 0.1 adds "
+    "five mappings, all out of band (87 total); the in-band count remains 165. "
+    "Thus 0.5 captures most of the width-stable coverage without the extra "
+    "span distortion of 0.2/0.1. All 227 mappings are retained and flagged; "
+    "this choice does not certify mapping accuracy or motif retention."
+)
 
 # Fill these with actual source headers; None deliberately fails with a clear error.
 # Canonical name -> source header. Coordinates, if supplied, must already be BED

@@ -75,7 +75,7 @@ Names such as `motif,maf1` and `motif,rare` identify other source categories and
 
 ### Geographic scope of the assembly finding
 
-The native interval numbers are supported as **hg19**, with unchanged zero-based, half-open coordinates yielding exact full-length matches in 47/47 sampled published oligos. The project target remains hg38. Source-to-target conversion is a required preprocessing step, not a result of changing `GENOME_BUILD`.
+The native interval numbers are supported as **hg19**, with unchanged zero-based, half-open coordinates yielding exact full-length matches in 47/47 sampled published oligos. The project target remains hg38. The source-to-target conversion is now complete: 12,815 verified, 47 lifted with sequence mismatches, and 4 failed lifts out of 12,866 inputs. Only the verified hg38 CSV enters downstream genomic analyses; excluded elements remain in a complete audit with repeat-bias diagnostics.
 
 This assembly conclusion does not automatically apply to variant coordinate encodings, the benchmark library, or the separate noncanonical library. Their provenance must be examined on its own terms.
 
@@ -164,7 +164,7 @@ All four functions in `src/metrics.py` remain stubs. No plausible-looking values
 | Issue | Consequence if ignored | Current response |
 | --- | --- | --- |
 | hg19 source interpreted as hg38 | Wrong reference sequence and genomic annotations | Explicit source/target constants and empirical assembly evidence |
-| Unreconciled element names | Dropped, duplicated, or incorrectly assigned sequences | 3,074 unmatched canonical names remain explicit |
+| Compound element names | Dropped, duplicated, or incorrectly assigned sequences | 3,074 explicit publisher aliases resolved with one-to-one checks and source-name retention |
 | Enhancer contexts collapsed without justification | Outcome definition changes silently | No aggregation implemented |
 | Missing activity confused with absence of an element | Population and intersection counts become misleading | Source presence and usable activity must be reported separately |
 | Mapping failure called motif absence | Retention classes become biased by mappability | Distinct failure and absence states |
@@ -177,14 +177,14 @@ All four functions in `src/metrics.py` remain stubs. No plausible-looking values
 
 | Decision | Present state | Evidence needed to close it |
 | --- | --- | --- |
-| Native source assembly | hg19 supported by exact sequence comparisons | Completed sampled audit; whole-set validation still outstanding |
-| Analysis target | hg38 configured | Verified conversion of source intervals |
-| Canonical sequence-name reconciliation | Incomplete | Explicit mapping evidence for the 3,074 missing direct joins |
+| Native source assembly | hg19 supported by exact sequence comparisons | Sampled source audit complete; full mapped set now compared to hg38 library sequences |
+| Analysis target | hg38 conversion complete | 12,815 exact-sequence-verified elements; all exclusions audited |
+| Canonical sequence-name reconciliation | Complete | All 3,074 missing direct joins resolved through explicit Table S2 aliases |
 | Enhancer handling | Undecided | A documented analysis unit consistent with the assay |
 | Missing-measurement policy | Undecided | Counts, causes, and effects on eligibility/intersections |
 | Sign and repression labels | Unverified | Trusted source definitions, controls, and call criteria |
 | Minimum K562/SK-N-SH usable overlap | Unspecified | An explicit criterion chosen for the intended comparison |
-| Cross-species `min_match` | Caller must supply it | A justified mapping policy and quality checks |
+| Cross-species `min_match` | Mouse-pilot value 0.5 from a four-value sweep | 227/390 lift; span/failure diagnostics retained; other species need reassessment |
 | CD-HIT identity/coverage | Operational defaults of 0.95/0.95 | A documented sensitivity/validation plan before scientific use |
 | Gate metrics and model specifications | Unimplemented | Verified definitions and an evaluation plan |
 
