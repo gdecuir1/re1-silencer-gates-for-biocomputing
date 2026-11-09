@@ -26,6 +26,7 @@ dependencies:
   - ucsc-liftover
   - ucsc-bigwigaverageoverbed
   - ucsc-twobitinfo
+  - ucsc-twobitinfo
   - ucsc-twobittofa
   - meme              # provides FIMO for motif scoring
   - cd-hit            # sequence clustering, to stop near-duplicate leakage across folds
