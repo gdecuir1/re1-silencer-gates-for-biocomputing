@@ -572,3 +572,10 @@ and assembly checked against the request. All original provenance rows are retai
 | `data/raw/genomes/verification/monDom5.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/monDom5/bigZips/md5sum.txt | 2026-11-08T22:38:11+00:00 | 361 | `a8acb0462e6dd97ff6c7eef628438aee` |
 | `data/raw/tools/twoBitInfo` | https://hgdownload.soe.ucsc.edu/admin/exe/macOSX.arm64/twoBitInfo | 2026-11-08T22:38:17+00:00 | 5813896 | `d601d883cbe63fedd2b85d33da2822ae` |
 | `data/raw/chains/hg38ToMm39.over.chain.gz` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToMm39.over.chain.gz | 2026-11-08T22:56:37+00:00 | 73017320 | `5256809040d3ac932a53d16c7b3979b6` |
+
+<!-- appended by scripts/fetch_genomes.sh -->
+| rheMac10.2bit | rhesus macaque | https://hgdownload.soe.ucsc.edu/goldenPath/rheMac10/bigZips/rheMac10.2bit | 2026-11-09T00:32:03Z | 0.72 GB | 331f913deb7529334a09ef764cb921c3 |
+| mm39.2bit | mouse | https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/mm39.2bit | 2026-11-09T00:32:03Z | 0.67 GB | db2e9ace19fb84697ff1c5a4c709599d |
+| canFam6.2bit | dog | https://hgdownload.soe.ucsc.edu/goldenPath/canFam6/bigZips/canFam6.2bit | 2026-11-09T00:32:03Z | 0.57 GB | 1508a6c203ab6493fb4d6f91b2f225cd |
+| bosTau9.2bit | cow | https://hgdownload.soe.ucsc.edu/goldenPath/bosTau9/bigZips/bosTau9.2bit | 2026-11-09T00:32:03Z | 0.66 GB | bbd2b89cef5951f39e709c946d8ead46 |
+| monDom5.2bit | opossum | https://hgdownload.soe.ucsc.edu/goldenPath/monDom5/bigZips/monDom5.2bit | 2026-11-09T00:32:03Z | 0.89 GB | cd4c3f09156745a3ae4e4150cbaaa332 |
