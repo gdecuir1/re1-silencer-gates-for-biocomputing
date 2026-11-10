@@ -8,8 +8,12 @@
 # Verifies every URL resolves BEFORE downloading anything, so a wrong
 # assembly name costs five seconds instead of forty minutes.
 #
-# Usage:  bash scripts/fetch_genomes.sh
-#         bash scripts/fetch_genomes.sh --check-only
+# Usage:  bash scripts/fetch_genomes.sh [--check-only] [--yes] [assembly ...]
+#         bash scripts/fetch_genomes.sh mm39
+#         bash scripts/fetch_genomes.sh --yes mm39
+#
+# With no assembly names, every target species is included. --yes skips the
+# confirmation prompt for an explicit caller such as src.fetch_mouse_scoring_inputs.
 
 set -euo pipefail
 
@@ -27,7 +31,43 @@ ASSEMBLIES=(
 )
 
 CHECK_ONLY=false
-[[ "${1:-}" == "--check-only" ]] && CHECK_ONLY=true
+ASSUME_YES=false
+REQUESTED=()
+for arg in "$@"; do
+  case "$arg" in
+    --check-only) CHECK_ONLY=true ;;
+    --yes) ASSUME_YES=true ;;
+    -*)
+      echo "Unknown option: $arg" >&2
+      exit 2
+      ;;
+    *) REQUESTED+=("$arg") ;;
+  esac
+done
+
+if [[ ${#REQUESTED[@]} -gt 0 ]]; then
+  FILTERED=()
+  seen=" "
+  for name in "${REQUESTED[@]}"; do
+    found=""
+    for entry in "${ASSEMBLIES[@]}"; do
+      if [[ "${entry%%:*}" == "$name" ]]; then
+        found="$entry"
+        break
+      fi
+    done
+    if [[ -z "$found" ]]; then
+      echo "Unknown assembly: $name" >&2
+      echo "Choose from: rheMac10 mm39 canFam6 bosTau9 monDom5" >&2
+      exit 2
+    fi
+    if [[ "$seen" != *" $name "* ]]; then
+      FILTERED+=("$found")
+      seen+="$name "
+    fi
+  done
+  ASSEMBLIES=("${FILTERED[@]}")
+fi
 
 mkdir -p "$DEST"
 
@@ -85,8 +125,12 @@ echo
 
 $CHECK_ONLY && { echo "Check only, stopping."; exit 0; }
 
-read -r -p "Download these to $DEST? [y/N] " reply
-[[ "$reply" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
+if $ASSUME_YES; then
+  echo "Downloading without a prompt (--yes)."
+else
+  read -r -p "Download these to $DEST? [y/N] " reply
+  [[ "$reply" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
+fi
 
 # ---------- phase 2: download, resumable ----------
 
