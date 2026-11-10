@@ -1,7 +1,7 @@
 PYTHON ?= python
 CONDA ?= conda
 
-.PHONY: env test lint clean assembly-check lift pilot pilot-mouse pilot-orthologs
+.PHONY: env test lint clean assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo
 
 env:
 	$(CONDA) env create -f environment.yml
@@ -32,6 +32,10 @@ pilot-mouse: pilot
 # Track motif mapping separately, then extract padded jointly mapped mouse DNA.
 pilot-orthologs: pilot-mouse
 	$(PYTHON) -m src.pilot_orthologs
+
+# Offline FIMO scan of the lifted mouse motif windows. Requires orthologs.mm39.csv.
+pilot-fimo:
+	$(PYTHON) -m src.pilot_fimo
 
 # Only disposable Python/tool caches; never data, results, or environments.
 clean:

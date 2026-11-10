@@ -680,3 +680,11 @@ and assembly checked against the request. All original provenance rows are retai
 | `data/raw/repeats/hg19.rmsk.txt.gz` | https://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/rmsk.txt.gz | 2026-11-10T21:14:29+00:00 | 148359433 | `bfed7e64af68efec90b9d419d98a2379` |
 | `data/raw/genomes/hg38.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/md5sum.txt | 2026-11-10T21:14:30+00:00 | 720 | `57face159b2845e2f58601d0050db7f7` |
 | `data/raw/genomes/hg38.2bit` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit | 2026-11-10T21:47:41+00:00 | 835393456 | `dcc3ea27079aa6dc3f9deccd7275e0f8` |
+| `data/raw/MA0138.2.meme` | https://jaspar.elixir.no/api/v1/matrix/MA0138.2.meme | 2026-11-10T22:12:40+00:00 | 1073 | `4de4483fff043233a0f077d2731d7275` |
+| `data/raw/genomes/verification/hg38.chrom.sizes` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes | 2026-11-10T22:12:42+00:00 | 11672 | `c42e9f75fff906c6a7143cb2fac86602` |
+| `data/raw/genomes/verification/hg38.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/md5sum.txt | 2026-11-10T22:12:42+00:00 | 720 | `57face159b2845e2f58601d0050db7f7` |
+| `data/raw/genomes/verification/mm39.chrom.sizes` | https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/mm39.chrom.sizes | 2026-11-10T22:12:42+00:00 | 1350 | `967c609a714df35c86a4f52ac85db377` |
+| `data/raw/genomes/verification/mm39.md5sum.txt` | https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/md5sum.txt | 2026-11-10T22:12:43+00:00 | 657 | `43249e4950c03c6b59bb8ef4d9ec7842` |
+
+<!-- appended by scripts/fetch_genomes.sh -->
+| mm39.2bit | mouse | https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/mm39.2bit | 2026-11-10T23:10:18Z | 0.67 GB | db2e9ace19fb84697ff1c5a4c709599d |
