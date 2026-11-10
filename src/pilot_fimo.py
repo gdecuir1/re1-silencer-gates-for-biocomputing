@@ -46,7 +46,9 @@ def _integer(value: object, label: str) -> int:
     return int(number)
 
 
-def scoring_windows(audit: pd.DataFrame, sizes: dict[str, int], flank: int = FLANK_BP) -> pd.DataFrame:
+def scoring_windows(
+    audit: pd.DataFrame, sizes: dict[str, int], flank: int = FLANK_BP
+) -> pd.DataFrame:
     """Expand each MAPPED motif interval by ``flank`` bp, clipping at chromosome ends.
 
     Non-MAPPED rows keep empty window fields. Padding is genomic, not strand-relative,
@@ -134,7 +136,9 @@ def assemble(audit: pd.DataFrame, windows: pd.DataFrame, hits: pd.DataFrame) -> 
     mapped = set(audit.loc[audit["call"].eq("MAPPED"), "element_id"])
     if set(hits["element_id"]) != mapped:
         raise ValueError("FIMO results must cover every MAPPED element and no others")
-    if not windows["element_id"].is_unique or set(windows["element_id"]) != set(audit["element_id"]):
+    window_ids = set(windows["element_id"])
+    same_ids = windows["element_id"].is_unique and window_ids == set(audit["element_id"])
+    if not same_ids:
         raise ValueError("Scan windows must match the sidecar IDs")
     columns = [
         "element_id",
@@ -149,7 +153,8 @@ def assemble(audit: pd.DataFrame, windows: pd.DataFrame, hits: pd.DataFrame) -> 
     slim = hits.loc[:, columns].rename(
         columns={"start": "fimo_start", "stop": "fimo_stop", "strand": "fimo_strand"}
     )
-    merged = audit.merge(windows, on="element_id", how="left").merge(slim, on="element_id", how="left")
+    merged = audit.merge(windows, on="element_id", how="left")
+    merged = merged.merge(slim, on="element_id", how="left")
     merged["motif_status"] = [
         _status(row.call, row.has_hit, row.retains_motif) for row in merged.itertuples(index=False)
     ]
@@ -178,11 +183,15 @@ def assemble(audit: pd.DataFrame, windows: pd.DataFrame, hits: pd.DataFrame) -> 
     return merged.sort_values("element_id", kind="stable").reset_index(drop=True)
 
 
-def choose_spotcheck(element_ids: list[str], count: int = SPOTCHECK_COUNT, seed: int = pilot.SAMPLE_SEED) -> list[str]:
+def choose_spotcheck(
+    element_ids: list[str], count: int = SPOTCHECK_COUNT, seed: int = pilot.SAMPLE_SEED
+) -> list[str]:
     """Choose a fixed sample of scored elements. The order in the report is sorted."""
     ordered = sorted(element_ids)
     if count < 1 or len(ordered) < count:
-        raise ValueError(f"Need at least {count} scored elements to spot-check; found {len(ordered)}")
+        raise ValueError(
+            f"Need at least {count} scored elements to spot-check; found {len(ordered)}"
+        )
     return sorted(random.Random(seed).sample(ordered, count))
 
 
@@ -249,7 +258,8 @@ def render(frame: pd.DataFrame, spotcheck: list[str], fingerprints: dict[str, st
         f"| present | {int(counts.get('present', 0))} | Best score >= {config.M_VALUE} |",
         f"| absent | {int(counts.get('absent', 0))} | Best hit is below {config.M_VALUE} |",
         f"| no_hit | {int(counts.get('no_hit', 0))} | MAPPED window with no FIMO hit |",
-        f"| unscored | {int(counts.get('unscored', 0))} | UNDETERMINED or ABSENT; not a motif-loss call |",
+        f"| unscored | {int(counts.get('unscored', 0))} | "
+        "UNDETERMINED or ABSENT; not a motif-loss call |",
         "",
         f"Sum: **{int(counts.reindex(STATUSES).fillna(0).sum())} / {len(frame)}**. "
         f"Scored elements: **{len(scored)}**.",
