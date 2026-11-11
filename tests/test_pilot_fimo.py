@@ -1,5 +1,7 @@
 """Synthetic checks for mouse-window FIMO calls. No genome or network is used."""
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -159,3 +161,56 @@ def test_missing_sidecar_does_not_publish(tmp_path, monkeypatch: pytest.MonkeyPa
         pilot_fimo.main()
     assert not (tmp_path / "report.md").exists()
     assert not (tmp_path / "scores.csv").exists()
+
+
+@pytest.mark.parametrize("failure", ["scoring", "serialize", "report_replace", None])
+def test_publication_preserves_prior_pair_on_failure(tmp_path, monkeypatch, failure):
+    sidecar = tmp_path / "sidecar.csv"
+    _audit().to_csv(sidecar, index=False)
+    sizes = tmp_path / "sizes"
+    sizes.write_text("chrSynthetic\t500\n")
+    genome = tmp_path / "genome.2bit"
+    genome.write_bytes(b"fixture; extraction is mocked")
+    scores, report = tmp_path / "scores.csv", tmp_path / "report.md"
+    scores.write_text("previous scores\n")
+    report.write_text("previous report\n")
+    monkeypatch.setattr(pilot_fimo.pilot_orthologs, "SIDECAR", sidecar)
+    monkeypatch.setattr(pilot_fimo.pilot_orthologs, "EXPECTED_PILOT_COUNT", 4)
+    monkeypatch.setattr(pilot_fimo, "GENOME", genome)
+    monkeypatch.setattr(pilot_fimo, "SCORES", scores)
+    monkeypatch.setattr(pilot_fimo, "REPORT", report)
+    monkeypatch.setattr(pilot_fimo, "download_small_file", lambda *_: sizes)
+    monkeypatch.setattr(pilot_fimo, "_output_columns", lambda frame: frame)
+
+    def score(*_):
+        if failure == "scoring":
+            raise RuntimeError("simulated FIMO failure")
+        return pd.DataFrame({"score": [25.0]}), "new report\n"
+
+    monkeypatch.setattr(pilot_fimo, "score_sidecar", score)
+    original_write = Path.write_text
+
+    def write(path, text, *args, **kwargs):
+        if failure == "serialize" and path.name == "report.md" and path.parent != tmp_path:
+            raise OSError("simulated disk write failure")
+        return original_write(path, text, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", write)
+    original_replace = pilot_fimo.os.replace
+
+    def replace(source, destination):
+        if failure == "report_replace" and destination == report:
+            raise OSError("simulated report rename failure")
+        return original_replace(source, destination)
+
+    monkeypatch.setattr(pilot_fimo.os, "replace", replace)
+    if failure:
+        with pytest.raises(SystemExit):
+            pilot_fimo.main()
+        assert scores.read_text() == "previous scores\n"
+        assert report.read_text() == "previous report\n"
+    else:
+        pilot_fimo.main()
+        assert pd.read_csv(scores).score.tolist() == [25.0]
+        assert report.read_text() == "new report\n"
+    assert not list(tmp_path.glob(".fimo-publish-*"))

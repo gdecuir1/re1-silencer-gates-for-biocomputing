@@ -1,7 +1,7 @@
 PYTHON ?= python
 CONDA ?= conda
 
-.PHONY: env test lint clean assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo
+.PHONY: env test lint clean assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo pilot-rescue
 
 env:
 	$(CONDA) env create -f environment.yml
@@ -36,6 +36,17 @@ pilot-orthologs: pilot-mouse
 # Offline FIMO scan of the lifted mouse motif windows. Requires orthologs.mm39.csv.
 pilot-fimo:
 	$(PYTHON) -m src.pilot_fimo
+
+# Separate outputs; requires the existing sidecar and successful MAPPED FIMO baseline.
+pilot-rescue:
+	$(PYTHON) -m src.rescue --assembly mm39 \
+		--chain data/raw/chains/hg38ToMm39.over.chain.gz \
+		--genome data/raw/genomes/mm39.2bit \
+		--sidecar data/processed/pilot_mouse/orthologs.mm39.csv \
+		--baseline-scores data/processed/pilot_mouse/fimo_scores.csv \
+		--baseline-report results/tables/pilot_mouse_fimo.md \
+		--output-prefix data/processed/pilot_mouse_rescue/rescue \
+		--report results/tables/pilot_mouse_rescue.md --expected-absent 158
 
 # Only disposable Python/tool caches; never data, results, or environments.
 clean:

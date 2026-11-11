@@ -45,6 +45,9 @@ EXPECTED_ELEMENT_COUNT = 8436
 PILOT_CHROM = "chr8"
 # chr8 sweep: 0.5 maps 227; 0.2/0.1 add mostly >20%-distorted spans (only 2 stable gains).
 MINMATCH_CROSS_SPECIES = 0.5
+# Adjacent-flank sweep at the shared minMatch: 500/1000/2000 bp yielded
+# 9/4/4 valid pairs among 158 pilot ABSENT elements. Selected before FIMO scoring.
+RESCUE_FLANK_BP = 500
 MINMATCH_CROSS_SPECIES_RATIONALE = (
     "Recommend 0.5 for this mouse pilot: 227/390 map (58.21%), with 163 spans "
     "within 160–240 bp and 64 outside. At 0.95 only 63 map (56 within the band). "

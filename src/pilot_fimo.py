@@ -18,6 +18,7 @@ import random
 import shutil
 from pathlib import Path
 from statistics import median
+from tempfile import TemporaryDirectory
 
 import pandas as pd
 
@@ -413,11 +414,9 @@ def _output_columns(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
-    """Score the existing mouse sidecar. Fail before publishing a partial table."""
+    """Stage completed scores/report before replacing either prior successful result."""
     if not pilot_orthologs.SIDECAR.is_file():
         raise FileNotFoundError("Missing orthologs.mm39.csv; run make pilot-orthologs first")
-    SCORES.unlink(missing_ok=True)
-    REPORT.unlink(missing_ok=True)
     try:
         audit = pd.read_csv(pilot_orthologs.SIDECAR)
         if len(audit) != pilot_orthologs.EXPECTED_PILOT_COUNT:
@@ -431,19 +430,32 @@ def main() -> None:
         frame, text = score_sidecar(audit, sizes, GENOME, config.MOTIF_PATH, OUTPUT)
         SCORES.parent.mkdir(parents=True, exist_ok=True)
         REPORT.parent.mkdir(parents=True, exist_ok=True)
-        temporary = SCORES.with_suffix(".csv.tmp")
-        _output_columns(frame).to_csv(temporary, index=False)
-        os.replace(temporary, SCORES)
-        REPORT.write_text(text)
+        with TemporaryDirectory(prefix=".fimo-publish-", dir=SCORES.parent) as staging:
+            staged_scores = Path(staging) / "scores.csv"
+            staged_report = Path(staging) / "report.md"
+            _output_columns(frame).to_csv(staged_scores, index=False)
+            staged_report.write_text(text)
+            # Keep a rollback copy until both replacements succeed. A scoring or
+            # serialization failure above never touches the published results.
+            previous_scores = Path(staging) / "previous.csv"
+            if SCORES.exists():
+                shutil.copyfile(SCORES, previous_scores)
+            os.replace(staged_scores, SCORES)
+            try:
+                os.replace(staged_report, REPORT)
+            except OSError:
+                if previous_scores.exists():
+                    os.replace(previous_scores, SCORES)
+                else:
+                    SCORES.unlink(missing_ok=True)
+                raise
         print(text, flush=True)
     except (ValueError, OSError, RuntimeError, AssertionError) as exc:
         failure = (
             "# Mouse pilot FIMO scores: FAILED\n\n"
             f"```text\n{type(exc).__name__}: {exc}\n```\n\n"
-            "No score table was published.\n"
+            "Previous published scores and report were preserved.\n"
         )
-        REPORT.parent.mkdir(parents=True, exist_ok=True)
-        REPORT.write_text(failure)
         print(failure, flush=True)
         raise SystemExit(1) from exc
 

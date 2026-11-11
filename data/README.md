@@ -688,3 +688,4 @@ and assembly checked against the request. All original provenance rows are retai
 
 <!-- appended by scripts/fetch_genomes.sh -->
 | mm39.2bit | mouse | https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/mm39.2bit | 2026-11-10T23:10:18Z | 0.67 GB | db2e9ace19fb84697ff1c5a4c709599d |
+| `data/raw/MA0138.2.meme` | https://jaspar.elixir.no/api/v1/matrix/MA0138.2.meme | 2026-11-11T16:19:04+00:00 | 1073 | `4de4483fff043233a0f077d2731d7275` |
