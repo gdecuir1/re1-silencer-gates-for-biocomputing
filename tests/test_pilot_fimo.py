@@ -118,6 +118,14 @@ def test_minus_strand_hit_uses_the_oriented_sequence() -> None:
     assert pilot_fimo.hit_interval(100, 110, "+", 2, 4) == (101, 104)
 
 
+def test_read_strand_flips_on_a_minus_window() -> None:
+    assert pilot_fimo._read_strand("+", "+") == "+"
+    assert pilot_fimo._read_strand("+", "-") == "-"
+    assert pilot_fimo._read_strand("-", "-") == "+"
+    assert pilot_fimo._read_strand("-", "+") == "-"
+    assert pilot_fimo._read_strand("", pd.NA) == ""
+
+
 def test_spotcheck_is_stable_and_the_report_leaves_observations_blank() -> None:
     windows = pilot_fimo.scoring_windows(_audit(), {"chrSynthetic": 500})
     frame = pilot_fimo.assemble(_audit(), windows, _hits())
@@ -128,6 +136,9 @@ def test_spotcheck_is_stable_and_the_report_leaves_observations_blank() -> None:
     assert f">= {config.M_VALUE}" in text
     assert f"{pilot_fimo.FLANK_BP} bp" in text
     assert "Browser observation" in text
+    assert "Best hit" in text
+    assert "[chrSynthetic:101-121](" in text
+    assert "[chrSynthetic:68-70](" in text
     assert "| synthetic_present |" in text
     assert text.split("| synthetic_present |")[1].split("\n")[0].endswith("| |")
     assert "does not prove REST" in text

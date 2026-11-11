@@ -202,6 +202,20 @@ def _interval(chrom: object, start: object, end: object, strand: object) -> str:
     return f"{chrom}:{int(start)}-{int(end)} ({strand})"
 
 
+def _browser_position(chrom: object, start: object, end: object) -> str:
+    """Format a zero-based half-open interval as a one-based UCSC position."""
+    if pd.isna(start) or pd.isna(end) or pd.isna(chrom) or chrom == "":
+        return ""
+    return f"{chrom}:{int(start) + 1}-{int(end)}"
+
+
+def _read_strand(window_strand: object, fimo_strand: object) -> str:
+    """Genomic strand of the hit. A minus-strand window flips FIMO's strand."""
+    if pd.isna(window_strand) or pd.isna(fimo_strand) or window_strand == "":
+        return ""
+    return "+" if window_strand == fimo_strand else "-"
+
+
 def _score_text(value: object) -> str:
     """Render a FIMO score with fixed precision. Missing scores stay blank."""
     return "" if pd.isna(value) else f"{float(value):.4f}"
@@ -275,10 +289,13 @@ def render(frame: pd.DataFrame, spotcheck: list[str], fingerprints: dict[str, st
         f"**{len(spotcheck)}** MAPPED elements, chosen with seed `{pilot.SAMPLE_SEED}` "
         "and then sorted. Intervals below are zero-based and half-open. The link opens "
         "the scan window in the UCSC mm39 browser; that position is one-based. "
+        "Best hit is the one-based UCSC position of the top-scoring FIMO hit and links "
+        "to it. Read is the genomic strand to compare against the RE1 consensus. "
         "The observation column is left blank for a manual check.",
         "",
-        "| Element | Motif interval | Scan window | Status | Score | Browser observation |",
-        "| --- | --- | --- | --- | ---: | --- |",
+        "| Element | Motif interval | Scan window | Best hit | Read | Status | Score "
+        "| Browser observation |",
+        "| --- | --- | --- | --- | :---: | --- | ---: | --- |",
     ]
     chosen = frame.set_index("element_id").loc[spotcheck]
     for element_id, row in chosen.iterrows():
@@ -287,9 +304,16 @@ def render(frame: pd.DataFrame, spotcheck: list[str], fingerprints: dict[str, st
         )
         window = _interval(row.window_chrom, row.window_start, row.window_end, row.window_strand)
         link = ucsc_url(row.window_chrom, int(row.window_start), int(row.window_end))
+        hit = _browser_position(row.window_chrom, row.hit_start, row.hit_end)
+        hit_cell = (
+            f"[{hit}]({ucsc_url(row.window_chrom, int(row.hit_start), int(row.hit_end))})"
+            if hit
+            else ""
+        )
+        read = _read_strand(row.window_strand, row.fimo_strand)
         lines.append(
-            f"| {element_id} | {motif} | [{window}]({link}) | {row.motif_status} | "
-            f"{_score_text(row.score)} | |"
+            f"| {element_id} | {motif} | [{window}]({link}) | {hit_cell} | {read} | "
+            f"{row.motif_status} | {_score_text(row.score)} | |"
         )
     lines += [
         "",
