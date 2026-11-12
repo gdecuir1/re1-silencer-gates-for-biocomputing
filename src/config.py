@@ -22,7 +22,10 @@ CHAIN_PATHS = {
 GENOME_PATHS = {species: RAW_DIR / "genomes" / f"{species}.fa" for species in CHAIN_PATHS}
 
 ELEMENT_LENGTH = 200
-MOTIF_SPAN = (91, 111)  # Zero-based, BOTH endpoints inclusive: 21 bases.
+# Authors select FIMO positions 91..111 (ONE-based inclusive). In our
+# zero-based inclusive convention this is 90..110; BED/Python slice [90,111).
+# https://github.com/tewhey-lab/duoREST/blob/main/README.md#L180
+MOTIF_SPAN = (90, 110)
 M_VALUE = 20.86
 CELL_TYPES = ["GM12878", "HepG2", "K562", "SK-N-SH"]
 JASPAR_ID = "MA0138.2"
@@ -46,7 +49,8 @@ PILOT_CHROM = "chr8"
 # chr8 sweep: 0.5 maps 227; 0.2/0.1 add mostly >20%-distorted spans (only 2 stable gains).
 MINMATCH_CROSS_SPECIES = 0.5
 # Adjacent-flank sweep at the shared minMatch: 500/1000/2000 bp yielded
-# 9/4/4 valid pairs among 158 pilot ABSENT elements. Selected before FIMO scoring.
+# 9/4/4 valid pairs; repeated on the corrected 157-element cohort.
+# The 500 bp choice was originally made before inspecting FIMO scores.
 RESCUE_FLANK_BP = 500
 MINMATCH_CROSS_SPECIES_RATIONALE = (
     "Recommend 0.5 for this mouse pilot: 227/390 map (58.21%), with 163 spans "

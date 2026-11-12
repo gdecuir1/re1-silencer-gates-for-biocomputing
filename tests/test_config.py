@@ -12,7 +12,7 @@ from src import config
 def test_verified_constants() -> None:
     """Keep the user-supplied scientific constants unchanged."""
     assert config.ELEMENT_LENGTH == 200
-    assert config.MOTIF_SPAN == (91, 111)
+    assert config.MOTIF_SPAN == (90, 110)
     assert config.M_VALUE == 20.86
     assert config.CELL_TYPES == ["GM12878", "HepG2", "K562", "SK-N-SH"]
     assert config.JASPAR_ID == "MA0138.2"

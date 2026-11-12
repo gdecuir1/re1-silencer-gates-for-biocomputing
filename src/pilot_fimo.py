@@ -247,6 +247,11 @@ def render(frame: pd.DataFrame, spotcheck: list[str], fingerprints: dict[str, st
     lines = [
         "# Mouse pilot FIMO scores",
         "",
+        "**Raw scan measurements, not evolutionary-loss calls.** See "
+        "[the evidence report](pilot_mouse_evidence.md) for human-site strength, "
+        "chain-block quality and comparison eligibility. A successful lift and a "
+        "below-threshold score alone do not establish motif loss.",
+        "",
         "## Scoring contract",
         "",
         f"Input: **{len(frame)}** pilot elements from `orthologs.mm39.csv`. "

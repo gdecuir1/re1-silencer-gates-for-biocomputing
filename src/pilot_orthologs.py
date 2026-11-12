@@ -279,8 +279,9 @@ def render(audit: pd.DataFrame, genomes: list[dict], fingerprints: dict) -> str:
         f"Configured MOTIF_SPAN=({a}, {b}) is **zero-based, both endpoints inclusive**. "
         + f"For plus-strand elements [s,e), motif BED is [s+{a},s+{b + 1}); "
         + f"for minus-strand elements it is [e-{b + 1},e-{a}). All input motif windows "
-        + "are asserted to be 21 bp. This preserves the existing config convention; "
-        + "it is not an independent validation of motif location by FIMO.",
+        + "are asserted to be 21 bp. The authors' one-based FIMO positions 91–111 "
+        + "become zero-based inclusive 90–110. Published oligo/score regression fixtures "
+        + "are checked separately by make pilot-validate.",
         "",
         "## Three-way calls",
         "",

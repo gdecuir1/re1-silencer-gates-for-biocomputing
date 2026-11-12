@@ -135,8 +135,10 @@ def test_three_states_and_uncertainty_survive_classification():
     resolved = rescue.resolve(frame, {"whole": whole, "center": center}, expected=3).set_index(
         "element_id"
     )
-    assert resolved.loc["wide", "whole_resolution"] == "RESCUED"
-    assert resolved.loc["short", "whole_resolution"] == "ABSENT_CONFIRMED"
+    assert resolved.loc["wide", "whole_resolution"] == "REGION_MOTIF_PRESENT"
+    assert resolved.loc["short", "whole_resolution"] == "REGION_BELOW_THRESHOLD"
+    assert resolved.loc["wide", "whole_ortholog_state"] == OrthologState.UNSCORABLE
+    assert resolved.loc["short", "whole_ortholog_state"] == OrthologState.UNSCORABLE
     assert resolved.loc["unknown", "whole_resolution"] == "NO_SYNTENY"
     assert resolved.loc["wide", "search_space_sensitive"]
     states = {species: OrthologState.NO_MOTIF for species in config.TARGET_SPECIES}

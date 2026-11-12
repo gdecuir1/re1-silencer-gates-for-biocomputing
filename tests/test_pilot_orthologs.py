@@ -27,7 +27,7 @@ def tracks():
         },
     }
     motif = {
-        "mapped": {name: interval(191, 212) for name in ("both", "motif_only")},
+        "mapped": {name: interval(190, 211) for name in ("both", "motif_only")},
         "unmapped": {
             name: windows[name] | {"failure_reason": "Deleted in new"}
             for name in ("element_only", "neither")
@@ -39,8 +39,8 @@ def tracks():
 def test_window_coordinates_both_strands_and_width_validation():
     source = {"plus": interval(), "minus": interval(strand="-")}
     windows = orth.motif_windows(source)
-    assert (windows["plus"]["start"], windows["plus"]["end"]) == (191, 212)
-    assert (windows["minus"]["start"], windows["minus"]["end"]) == (188, 209)
+    assert (windows["plus"]["start"], windows["plus"]["end"]) == (190, 211)
+    assert (windows["minus"]["start"], windows["minus"]["end"]) == (189, 210)
     assert all(row["end"] - row["start"] == 21 for row in windows.values())
     source["plus"]["end"] = 301
     with pytest.raises(ValueError, match="200 bp"):
@@ -78,7 +78,7 @@ def test_missing_ids_never_vanish():
 def test_padding_clipping_and_empty_nonmapped_fields():
     source, windows, element, motif = tracks()
     element["mapped"]["both"] = interval(0, 200)
-    motif["mapped"]["both"] = interval(91, 112)
+    motif["mapped"]["both"] = interval(90, 111)
     audit = orth.classify_tracks(source, windows, element, motif)
     records, padded = orth.padded_records(audit, {"chr1": 210})
     assert records["both"]["start"] == 0 and records["both"]["end"] == 210

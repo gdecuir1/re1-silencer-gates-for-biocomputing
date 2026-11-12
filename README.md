@@ -8,7 +8,7 @@ Gabrielle DeCuir and Vrinda Sehgal · Johns Hopkins Applied Comparative Genomics
 
 This repository connects published reporter measurements, verified human sequences, and comparative genome mappings to ask which RE1 elements merit experimental follow-up. RE1 is a binding site for the transcriptional repressor REST. The source experiment, MPRAduo, measures regulatory activity in an enhancer–silencer reporter context. The engineering motivation is to identify candidates whose repression could be useful in transcriptional circuits. Reporter activity alone does not demonstrate a working gate. [Source study](https://pmc.ncbi.nlm.nih.gov/articles/PMC9903721/)
 
-**The completed workflow reaches sequence extraction for the mouse pilot.** It has resolved the source assembly, produced **12,815 sequence-verified hg38 elements**, selected **390 canonical chr8 elements**, and extracted **217 mouse sequences** with motif-window mapping tracked separately. These are data-validation and mapping results; conservation effects, predictive performance, and gate behavior have not been established. [Human conversion](results/tables/liftover_hg19_to_hg38.md) · [Pilot](results/tables/pilot_setup.md) · [Mouse ortholog sequences](results/tables/pilot_mouse_orthologs.md)
+**The completed workflow reaches human/mouse motif scoring and explicit comparison eligibility for the mouse pilot.** It has produced **12,815 sequence-verified hg38 elements**, selected **390 canonical chr8 elements**, and extracted **219 mouse sequences** after correcting the motif coordinates. The current comparison table contains **289 weak human sites, 63 unresolved cases, 20 retention candidates and 18 nonretention candidates**. These are sequence-evidence categories; evolutionary loss, predictive performance and gate behavior have not been established. [Current evidence report](results/tables/pilot_mouse_evidence.md) [Human conversion](results/tables/liftover_hg19_to_hg38.md) · [Pilot](results/tables/pilot_setup.md) · [Mouse ortholog sequences](results/tables/pilot_mouse_orthologs.md)
 
 > **Coordinate contract:** published native coordinates are hg19. Downstream genomic work uses `data/processed/elements_hg38.csv`, whose retained sequences were verified against hg38. Original hg19 coordinates remain as traceability fields. Element IDs retain their original names and may contain hg19 coordinate text; never reconstruct working coordinates from an ID.
 
@@ -40,11 +40,11 @@ The source cell types are **GM12878, HepG2, K562, and SK-N-SH**. The native popu
 
 The GEO archive contains processed construct-level activity and genomic intervals, despite its `RAW.tar` filename. A construct row is not an independent genomic element: enhancer contexts and cell types can share an element. In the native WGREST tables, `silencer` identifies the element, while `id` identifies the construct; `log2FoldChange` and `lfcSE` are published activity fields. Collapsing identical coordinate metadata for sequence work does **not** aggregate activity. The full schema inventory is available in the [local report directory](results/tables/) and indexed by the [data catalog](data/README.md).
 
-The coordinate workflow uses zero-based, half-open BED intervals. Human elements are **200 bp**. `MOTIF_SPAN=(91, 111)` uses zero-based, **inclusive** endpoints, giving a **21 bp** window. For an element `[s,e)`, the motif BED is `[s+91,s+112)` on the plus strand and `[e-112,e-91)` on the minus strand. This is the implemented coordinate convention, not an independent FIMO confirmation of the motif's location. [Conversion contract](results/tables/liftover_hg19_to_hg38.md) · [Motif-window contract](results/tables/pilot_mouse_orthologs.md)
+The coordinate workflow uses zero-based, half-open BED intervals. Human elements are **200 bp**. `MOTIF_SPAN=(90, 110)` uses zero-based, **inclusive** endpoints, giving a **21 bp** window. For an element `[s,e)`, the motif BED is `[s+90,s+111)` on the plus strand and `[e-111,e-90)` on the minus strand. The authors' FIMO positions 91–111 are one-based; five published oligos and scores independently validate this conversion and the score scale. [Reference fixtures](references/README.md) [Conversion contract](results/tables/liftover_hg19_to_hg38.md) · [Motif-window contract](results/tables/pilot_mouse_orthologs.md)
 
 ### Implemented stages, in dependency order
 
-Paths below are relative to the repository root. Each automated data target prints its report and writes the linked Markdown artifact.
+Paths below are relative to the repository root. Each automated data target prints results and writes its Markdown report.
 
 | Stage | Input | Method and parameters | Principal outputs | Make target | Evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -54,6 +54,11 @@ Paths below are relative to the repository root. Each automated data target prin
 | Select pilot | Verified hg38 CSV and hg38 reference | Verify required genome; select canonical chr8 elements; assert interval widths; extract a fixed random sample for exact sequence regression | `data/processed/pilot_chr8.bed`; evidence in `data/processed/pilot_setup/` | `make pilot` | [Pilot report](results/tables/pilot_setup.md) |
 | Evaluate mouse mapping | Pilot BED, hg38→mm39 chain, hg38/mm39 references | Sweep `minMatch` over 0.95, 0.5, 0.2, 0.1; retain failures and width flags; repeat configured value for final output | `data/processed/pilot_mouse/sweep.csv`; per-threshold directories; `final/lifted.mm39.bed`, `final/unmapped.hg38.bed`, `final/element_audit.csv` | `make pilot-mouse` | [Mouse lift report](results/tables/pilot_mouse_lift.md) |
 | Resolve motif coverage and extract mouse DNA | Pilot, final element-track outputs, same chain and references | Lift motif windows independently at 0.5; join by ID; validate concordance; extract MAPPED element spans with 15 bp padding per side | `data/processed/pilot_mouse/orthologs.mm39.fa`, `orthologs.mm39.csv`; both motif lift outputs and extraction evidence | `make pilot-orthologs` | [Ortholog sequence report](results/tables/pilot_mouse_orthologs.md) |
+| Score mapped mouse windows | Corrected sidecar, MA0138.2, mouse genome | Shared FIMO best-hit scoring, m-value 20.86 | `data/processed/pilot_mouse/fimo_scores.csv` | `make pilot-fimo` | [Raw scores](results/tables/pilot_mouse_fimo.md) |
+| Inspect unmapped regions | Neither-track-lifted cohort, source flanks, chain and genome | 500/1000/2000 bp flank sweep; whole-gap and midpoint scans | `data/processed/pilot_mouse_rescue/rescue.resolved.csv` | `make pilot-rescue` | [Regional evidence](results/tables/pilot_mouse_rescue.md) |
+| Validate source and correspondence | All preceding evidence, human genome, published fixtures | Human core/window/element scoring, target-core scoring, chain blocks and explicit uncertainty | `data/processed/pilot_mouse_evidence/calls.csv` | `make pilot-validate` | [Comparison report](results/tables/pilot_mouse_evidence.md) |
+
+`make pilot-validate` rebuilds these upstream stages, then runs baseline FIMO, flank rescue and the human/target evidence layer in order. `python -m src.pilot_evidence --check` checks its input/output hashes.
 
 `make pilot-orthologs` invokes `make pilot-mouse`, which invokes `make pilot`. The human conversion is an explicit upstream handoff; downstream targets do not relift hg19. All these Make data targets are offline. Acquisition is separate.
 
@@ -159,14 +164,14 @@ At `minMatch=0.5`, an element can pass even if its motif-bearing region does not
 
 | Element track | Motif-window track | Call | Observed elements | Interpretation |
 | --- | --- | --- | ---: | --- |
-| Lifted | Lifted | MAPPED | 217 | Eligible for sequence extraction after chromosome, strand, and containment checks |
-| Lifted | Unmapped | UNDETERMINED | 10 | Element mapped without a mapped motif window; exclude mouse downstream |
-| Unmapped | Lifted | UNDETERMINED | 5 | Motif-only mapping; retain its coordinates, but exclude mouse downstream |
-| Unmapped | Unmapped | ABSENT | 158 | Candidate alignment loss; not proven biological loss |
+| Lifted | Lifted | MAPPED | 219 | Eligible for sequence extraction after chromosome, strand, and containment checks |
+| Lifted | Unmapped | UNDETERMINED | 8 | Element mapped without a mapped motif window; exclude mouse downstream |
+| Unmapped | Lifted | UNDETERMINED | 6 | Motif-only mapping; retain its coordinates, but exclude mouse downstream |
+| Unmapped | Unmapped | ABSENT | 157 | Candidate alignment loss; not proven biological loss |
 
-The totals are **217 MAPPED + 15 UNDETERMINED + 158 ABSENT = 390**, asserted in code. Motif-only outcomes deliberately remain UNDETERMINED. All **217/217** jointly lifted records pass chromosome/strand agreement and motif-within-element containment. A discordant joint lift is a hard failure, not a silently accepted ortholog. [Call accounting](results/tables/pilot_mouse_orthologs.md)
+The totals are **219 MAPPED + 14 UNDETERMINED + 157 ABSENT = 390**, asserted in code. Motif-only outcomes deliberately remain UNDETERMINED. All **219/219** jointly lifted records pass chromosome/strand agreement and motif-within-element containment. A discordant joint lift is a hard failure, not a silently accepted ortholog. [Call accounting](results/tables/pilot_mouse_orthologs.md)
 
-A passing motif-window lift can still map only part of the window. **MAPPED establishes mapping availability; it does not establish an intact or functional motif.** No motif rescoring has yet been reported.
+A passing motif-window lift can still map only part of the window. **MAPPED establishes mapping availability; it does not establish an intact or functional motif.** The raw mouse window scans produce 30 above-threshold and 189 below-threshold results. The evidence layer also scores the exact corresponding site and excludes weak human sites or uncertain alignments from the direct contrast. [FIMO](results/tables/pilot_mouse_fimo.md) · [Evidence](results/tables/pilot_mouse_evidence.md)
 
 ### Extracted mouse sequences
 
@@ -174,29 +179,37 @@ Only MAPPED elements enter `orthologs.mm39.fa`. Extraction uses the lifted **ele
 
 | Check | Observed |
 | --- | ---: |
-| FASTA records, equal to MAPPED count | 217 |
+| FASTA records, equal to MAPPED count | 219 |
 | Sidecar rows, equal to pilot input | 390 |
-| MAPPED elements within 160–240 bp before padding | 157 |
+| MAPPED elements within 160–240 bp before padding | 159 |
 | MAPPED elements outside 160–240 bp before padding | 60 |
 | Extracted sequence lengths, minimum–maximum from the reported distribution | 136–3,285 bp |
 | Extracted sequences under 50 bp | 0 |
 | Sequences containing N | 0 |
 | Elements with padding clipped at a chromosome boundary | 0 |
 
-Long or short target spans are retained and flagged rather than removed to improve apparent coverage. These sequences are ready for a scoring stage; they are not yet evidence of retained or lost REST binding.
+Long or short target spans are retained and flagged rather than removed to improve apparent coverage. They have been scored with the shared FIMO helper, but sequence matches do not demonstrate retained or lost REST binding.
+
+### Corrected evidence and preserved prior run
+
+Use `data/processed/pilot_mouse_evidence/calls.csv` as the current all-element comparison table. It keeps raw scan results, human strength, source/target coordinates, chain gaps and trimming, and separate comparison eligibility. Weak human sites remain available for repression modeling. A region below threshold is not automatically an evolutionary loss.
+
+The corrected rescue cohort has **157** elements. The selected 500 bp flanks yield **9** accepted regions: **1 REGION_MOTIF_PRESENT, 8 REGION_BELOW_THRESHOLD, 148 NO_SYNTENY** across the cohort. The sole positive disappears in the 101 bp midpoint scan. Both accepted regional states remain unresolved at the motif-correspondence level; the earlier RESCUED/ABSENT_CONFIRMED labels are retired. [Rescue report](results/tables/pilot_mouse_rescue.md)
+
+The prior code and output files are preserved with a SHA-256 manifest in `results/archive/pilot_before_motif_coordinate_fix_20261111_45402c8/`. The all-element old/new comparison is `data/processed/pilot_mouse_evidence/comparison_to_previous.csv`.
 
 ### Completion boundary
 
 | Component | Completed work | Remaining work |
 | --- | --- | --- |
 | Inputs and assemblies | GEO inspection; sampled source-assembly discrimination; exhaustive human conversion and sequence verification | Resolve activity aggregation, missing measurements, repression sign, and repression-call definitions |
-| Mouse pilot | Required-reference checks, canonical BED, sequence regression, minMatch sweep, dual-track calls, padded sequence extraction | Score motifs and assess how mapping uncertainty and width distortion affect interpretation |
-| Comparative features | Generic source/target lift wrapper; conservation and motif-scoring helper code | Validate production motif inputs and score scale, select conservation tracks, acquire/validate cofactor accessions, run remaining species |
-| Evolutionary classification | Helper logic for supplied species states | Connect measured motif evidence and missingness to biological classifications; no production classifications reported |
+| Mouse pilot | Corrected motif coordinates, reference checks, dual-track lift, human/mouse FIMO, flank sweep, chain-block evidence and all-element comparison table | Review uncertain alignments and test functional interpretations |
+| Comparative features | Generic lift and chain-evidence helpers; validated motif inputs/score scale; conservation helper | Select conservation tracks, acquire/validate cofactor accessions, run remaining species |
+| Evolutionary classification | Explicit conservative mouse evidence adapter and eligibility mask | Extend to other species and establish ancestral states; candidates are not demonstrated evolutionary losses |
 | Predictive evaluation | Chromosome/sequence-cluster fold builder and evaluator for supplied predictions | Produce real fold assignments, implement training, fit held-out models, and estimate performance |
 | Candidate prioritization | Research design and explicit metric interfaces | Define and implement gate-quality metrics, rank candidates, and test experimentally |
 
-Model-training functions in [`src/models.py`](src/models.py) and gate-quality functions in [`src/metrics.py`](src/metrics.py) intentionally raise `NotImplementedError`. The proposed consolidated activity/FIMO validation harness, `src/validate.py` and `make validate`, does not exist. A configuration constant or tested helper is not a completed biological analysis.
+Model-training functions in [`src/models.py`](src/models.py) and gate-quality functions in [`src/metrics.py`](src/metrics.py) intentionally raise `NotImplementedError`. `make pilot-validate` rebuilds and validates sequence evidence; consolidated activity validation (`src/validate.py` / `make validate`) remains unimplemented. A configuration constant or tested helper is not a completed biological analysis.
 
 ## Design decisions and why
 
@@ -245,7 +258,7 @@ Separate paired-run checks compared generated artifacts using SHA-256. These man
 | --- | ---: | --- | --- |
 | `make lift` | 10 | Byte-identical | [Human conversion](results/tables/liftover_hg19_to_hg38_reproducibility.json) |
 | `make pilot-mouse` | 33 | Byte-identical; printed output identical | [Mouse lift](results/tables/pilot_mouse_reproducibility.json) |
-| `make pilot-orthologs` | 47 | Byte-identical; printed output identical | [Mouse extraction](results/tables/pilot_mouse_orthologs_reproducibility.json) |
+| `make pilot-validate` | 112 | See the measured full-pipeline replay receipt | [Corrected pilot](results/tables/pilot_validation_reproducibility.json) |
 
 Stable ordering, a fixed pilot sample, and timestamp-free conversion/pilot reports support replay with identical inputs and tools. This does not claim identical bytes across software versions or filesystem layouts. The standalone assembly-evidence report includes its generation timestamp; the byte-identical claims above concern the listed workflows. Input hashes and executed commands are retained in the reports and logs.
 
@@ -262,7 +275,7 @@ make test
 make lint
 ```
 
-`make env` is equivalent to the environment-creation command. [environment.yml](environment.yml) declares Python dependencies and genomics packages. The completed workflow needs `liftOver`, `twoBitInfo`, and `twoBitToFa`; explicit acquisition uses system `curl`. FIMO, bedtools, and CD-HIT support other helpers and integration tests. Missing executables can cause integration tests to skip, so inspect the test summary rather than interpreting a skip as successful tool verification.
+`make env` is equivalent to the environment-creation command. [environment.yml](environment.yml) declares Python dependencies and genomics packages. The completed workflow needs `liftOver`, `twoBitInfo`, `twoBitToFa`, and FIMO; explicit acquisition uses system `curl`. bedtools and CD-HIT support other helpers and integration tests. Missing executables can cause integration tests to skip, so inspect the test summary rather than interpreting a skip as successful tool verification.
 
 Use `make TARGET PYTHON=/path/to/python` when selecting an interpreter explicitly. Do not run Python with assertions disabled: accounting assertions are part of the validation contract.
 
@@ -278,6 +291,7 @@ Use `make TARGET PYTHON=/path/to/python` when selecting an interpreter explicitl
 | Required genomes | `data/raw/genomes/hg38.2bit`, `data/raw/genomes/mm39.2bit` | Human verification and mouse extraction |
 | UCSC reference metadata | `data/raw/genomes/verification/` | Per-assembly `.chrom.sizes` and `md5sum.txt` caches |
 | Mouse chain | `data/raw/chains/hg38ToMm39.over.chain.gz` | Element and motif-window projections |
+| REST motif matrix | `data/raw/MA0138.2.meme` | Shared human/mouse FIMO scoring and published-score regression |
 | Provenance ledger | `data/README.md` | Source URLs and cache identity |
 
 A fresh checkout contains code and documentation, not the downloaded references or generated reports. Use the [data catalog](data/README.md) for exact source URLs and recorded identities. The failed `mmc3.zip` response retained in the assembly-check directory is an HTML challenge, not the usable supplement; use `Table_S2_publisher.zip`. [Fetch failure and recovery evidence](results/tables/coordinate_assembly.md)
@@ -340,10 +354,10 @@ With inputs and executables available:
 ```bash
 make assembly-check
 make lift
-make pilot-orthologs
+make pilot-validate
 ```
 
-For intermediate inspection, `make pilot` and `make pilot-mouse` are independently available. The last command above rebuilds both before motif-window mapping and extraction. Reports print expected/observed values or explicit errors. Do not bypass a failed gate or substitute an unverified file to obtain an output.
+For intermediate inspection, `make pilot`, `make pilot-mouse`, `make pilot-orthologs`, `make pilot-fimo`, and `make pilot-rescue` are independently available. The last command above rebuilds all of them in dependency order and publishes the human/target evidence table last. Reports print expected/observed values or explicit errors. Do not bypass a failed gate or substitute an unverified file to obtain an output.
 
 Re-running with identical inputs and tools should reproduce the conversion and pilot artifacts. Compare their hashes and reports as in the [recorded repeatability checks](#recorded-repeatability); the standalone assembly report's timestamp is expected to change. `make test` checks software behavior; real-data assertions in the data targets are separate evidence.
 

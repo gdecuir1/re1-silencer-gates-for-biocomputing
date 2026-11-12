@@ -26,8 +26,9 @@ MAX_GAP_BP = 10_000
 WINDOW_BP = 101
 # An operational span guard, not a biological deletion cutoff.
 STATE_MAP = {
-    "RESCUED": OrthologState.RETAINED,
-    "ABSENT_CONFIRMED": OrthologState.NO_MOTIF,
+    # A motif in a syntenic region is not yet a verified corresponding motif.
+    "REGION_MOTIF_PRESENT": OrthologState.UNSCORABLE,
+    "REGION_BELOW_THRESHOLD": OrthologState.UNSCORABLE,
     "NO_SYNTENY": OrthologState.FAILED_LIFT,
 }
 REASONS = (
@@ -359,7 +360,11 @@ def resolve(frame: pd.DataFrame, scans: dict[str, pd.DataFrame], expected: int) 
         if not status.loc[result.valid_pair].isin(["present", "absent"]).all():
             raise ValueError("An unscorable anchor pair cannot be assigned a loss")
         result[f"{mode}_resolution"] = [
-            "NO_SYNTENY" if not valid else "RESCUED" if call == "present" else "ABSENT_CONFIRMED"
+            "NO_SYNTENY"
+            if not valid
+            else "REGION_MOTIF_PRESENT"
+            if call == "present"
+            else "REGION_BELOW_THRESHOLD"
             for valid, call in zip(result.valid_pair, status, strict=True)
         ]
         result[f"{mode}_ortholog_state"] = result[f"{mode}_resolution"].map(STATE_MAP)
@@ -406,15 +411,10 @@ def render(
     fingerprints: dict,
     prefix: Path,
 ) -> str:
-    """Report measured counts, short-gap caveats, width strata, and explicit state mapping."""
-    valid = result.loc[result.valid_pair].copy()
-    changed = int(valid.search_space_sensitive.sum())
-    any_positive = int((valid.whole_status.eq("present") | valid.center_status.eq("present")).sum())
-    # Operational sensitivity rule fixed before inspecting scores. With few positives,
-    # even one disagreement can dominate the inferred rescue rate.
-    small = changed == 0 or (
-        changed / max(len(valid), 1) <= 0.05 and changed / max(any_positive, 1) <= 0.10
-    )
+    """Report regional evidence without upgrading a negative scan to a loss."""
+    valid = result.loc[result.valid_pair]
+    base = baseline.loc[baseline.call.eq("MAPPED")]
+    widths = base.window_end - base.window_start
     counts = (
         pd.DataFrame(
             {
@@ -422,11 +422,20 @@ def render(
                 for mode in ("whole", "center")
             }
         )
-        .rename_axis("state")
+        .rename_axis("regional_result")
         .reset_index()
     )
-    base = baseline.loc[baseline.call.eq("MAPPED")]
-    widths = base.window_end - base.window_start
+    changed = int(valid.search_space_sensitive.sum())
+    positive = int((valid.whole_status.eq("present") | valid.center_status.eq("present")).sum())
+    small = changed == 0 or (
+        changed / max(len(valid), 1) <= 0.05 and changed / max(positive, 1) <= 0.10
+    )
+    failures = (
+        summary[["flank_bp", *REASONS]]
+        .set_index("flank_bp")
+        .T.rename_axis("first_failure")
+        .reset_index()
+    )
     strata = []
     for low, high in ((0, 100), (101, 200), (201, 500), (501, 1000), (1001, max_gap)):
         subset = valid.loc[pd.to_numeric(valid.gap_width).between(low, high)]
@@ -435,44 +444,32 @@ def render(
                 gap_bp=f"{low}–{high}",
                 n=len(subset),
                 whole_present=int(subset.whole_status.eq("present").sum()),
-                whole_absent=int(subset.whole_status.eq("absent").sum()),
+                whole_below_threshold=int(subset.whole_status.eq("absent").sum()),
                 center_present=int(subset.center_status.eq("present").sum()),
-                center_absent=int(subset.center_status.eq("absent").sum()),
+                center_below_threshold=int(subset.center_status.eq("absent").sum()),
                 changed=int(subset.search_space_sensitive.sum()),
             )
         )
-    rejection = summary[["flank_bp", *REASONS]].set_index("flank_bp").T.reset_index()
-    rejection = rejection.rename(columns={"index": "first_failure"})
     recommended = int(
         summary.sort_values(["valid_pairs", "flank_bp"], ascending=[False, True]).iloc[0].flank_bp
     )
-    medians = ", ".join(
-        f"{int(r.flank_bp)} bp: {r.median_gap_bp:g} bp"
-        for r in summary.itertuples()
-        if pd.notna(r.median_gap_bp)
-    )
     lines = [
-        f"# Flank-anchored rescue: {config.GENOME_BUILD} → {assembly}",
+        f"# Flank-region evidence: {config.GENOME_BUILD} → {assembly}",
         "",
-        f"**{len(result)} previously ABSENT elements; {len(valid)} valid pairs at F={flank} bp.** "
-        f"Whole-gap calls: {int(result.whole_resolution.eq('RESCUED').sum())} RESCUED, "
-        f"{int(result.whole_resolution.eq('ABSENT_CONFIRMED').sum())} ABSENT_CONFIRMED, "
-        f"{int(result.whole_resolution.eq('NO_SYNTENY').sum())} NO_SYNTENY. "
-        "NO_SYNTENY is unresolved evidence, never motif loss.",
+        f"**{len(result)} neither-track-lifted elements in the corrected cohort; "
+        f"{len(valid)} valid anchor pairs at F={flank} bp.** "
+        "These are regional motif measurements, "
+        "not confirmed losses or proven corresponding motifs.",
         "",
-        "## MAPPED FIMO baseline",
+        "## Baseline mouse FIMO",
         "",
-        f"{len(base)} MAPPED elements: **{int(base.motif_status.eq('present').sum())} present, "
-        f"{int(base.motif_status.eq('absent').sum())} absent**, "
-        f"{int(base.motif_status.eq('no_hit').sum())} no-hit. "
-        f"The other {len(baseline) - len(base)} sidecar rows are unscored.",
+        f"{len(base)} MAPPED windows: {int(base.motif_status.eq('present').sum())} present, "
+        f"{int(base.motif_status.eq('absent').sum())} below threshold, "
+        f"{int(base.motif_status.eq('no_hit').sum())} no-hit; "
+        f"{len(baseline) - len(base)} other rows unscored. Actual mapped window lengths "
+        f"{int(widths.min())}–{int(widths.max())} bp (lifted motif ±40 bp, nominally 101 bp).",
         "",
-        f"The baseline uses lifted motif ±40 bp: nominally 101 bp, actually "
-        f"{int(widths.min())}–{int(widths.max())} bp because lifted motif widths vary. "
-        "Its existing mapping, extraction and scoring logic is unchanged. "
-        "Only safe publication of its completed score table/report was changed.",
-        "",
-        "## Flank sweep (geometry selected before scoring)",
+        "## Measured flank sweep",
         "",
         markdown(
             summary[
@@ -487,74 +484,60 @@ def render(
             ]
         ),
         "",
-        f"Recommend **F={recommended} bp** from this sweep; selected F={flank} bp "
-        f"(`config.RESCUE_FLANK_BP` defaults to {config.RESCUE_FLANK_BP}): "
-        "maximize valid-pair coverage, choosing the smallest flank on a tie. "
-        f"Observed median widths: {medians}. No monotone improvement or gap widening "
-        "is supported by this sweep. Human inner flank edges stay at the element boundaries; "
-        "longer flanks change alignment coverage and endpoints, not the source gap. "
-        "Each sweep has a different accepted subset; its medians are not a paired comparison.",
+        f"Coverage-based recommendation F={recommended} bp; selected F={flank} bp, "
+        f"config.RESCUE_FLANK_BP={config.RESCUE_FLANK_BP}. Choose the smallest flank on a tie. "
+        "Adjacent flanks retain fixed source inner edges; increasing length does not "
+        "necessarily widen the target gap or improve coverage. Sweep medians refer to "
+        "different accepted subsets and are not a paired width comparison.",
         "",
-        f"All flanks use configured minMatch={config.MINMATCH_CROSS_SPECIES}; "
-        "full 200 bp source elements are excluded from both anchors. "
-        "Both anchors must return one mapping (liftOver without -multiple; duplicate IDs "
-        "are rejected), share chromosome and "
-        "orientation, preserve order including inversions, and leave a nonnegative gap "
-        f"≤{max_gap:,} bp. This maximum is a prespecified operational guard, not a validated "
-        "biological cutoff. Coordinates are zero-based, half-open. Source boundary flanks "
-        "are rejected rather than shortened. Reasons are mutually exclusive first failures.",
+        f"Both flanks use configured minMatch={config.MINMATCH_CROSS_SPECIES}. "
+        "Acceptance requires one returned mapping per flank, same target chromosome and "
+        "orientation, preserved order including inversions, and a nonnegative gap "
+        f"≤{max_gap:,} bp. The maximum is an operational guard, not a biological cutoff. "
+        "The full human element is excluded from both source flanks. Coordinates are "
+        "zero-based half-open. Source boundaries are rejected rather than shortened.",
         "",
-        "## Rejection reasons at every flank size",
+        "## First-failure reasons",
         "",
-        markdown(rejection),
+        markdown(failures),
         "",
-        "Raw left/right liftOver reasons and coordinates are retained for every element "
-        "in each flank CSV. Missing anchors can reflect divergence or ambiguous mapping; "
-        "they do not demonstrate a deletion.",
+        "These mutually exclusive reasons partition rejected pairs. The flank CSVs also "
+        "retain raw liftOver reasons. No failure is automatically biological absence.",
         "",
-        "## Resolution and search-space sensitivity",
+        "## Regional results",
         "",
         markdown(counts),
         "",
-        f"Both columns sum to {len(result)}; asserted in code. "
-        f"**{changed}/{len(valid)} anchored calls change** "
-        f"({100 * changed / max(len(valid), 1):.1f}%; "
-        f"{changed}/{any_positive} of elements positive "
-        "in either scan).",
+        f"Both columns sum to {len(result)}, asserted against the actual input cohort. "
+        "The old RESCUED / ABSENT_CONFIRMED terminology is replaced: a hit in a region "
+        "does not establish correspondence to the original human motif, and a negative "
+        "scan does not establish evolutionary loss.",
         "",
-        (
-            "The observed change is small; recommend whole-gap calls while retaining the "
-            "midpoint sensitivity check. This small pilot does not calibrate a false-positive rate."
+        f"**{changed}/{len(valid)} anchored regional calls change** between whole gap and "
+        f"midpoint; {changed}/{positive} of any-positive regions. "
+        + (
+            "Changes are small by the prespecified ≤5% of anchored and ≤10% of any-positive "
+            "rule; use the whole gap as a regional scan with midpoint sensitivity retained."
             if small
-            else "**The rescue rate is search-space dependent.** Do not use the "
-            "whole-gap rescue rate as directly comparable to MAPPED. Carry both analyses; "
-            "use midpoint calls for the matched-length sensitivity analysis, remembering that "
-            "a midpoint can miss a genuine off-center motif. Resolve discordant sites before "
-            "making a biological loss claim."
+            else "**The positive regional rate is search-space dependent.** Carry both "
+            "scans; do not treat the whole-gap rate as directly comparable to MAPPED windows."
         ),
         "",
-        "The operational definition of small is ≤5% of anchored calls AND ≤10% of "
-        "any-positive calls changing (or zero changes), fixed before examining scores.",
+        "Both scans reuse motifs.score_sequences, MA0138.2, both strands, FIMO "
+        f"--text --thresh 1, the same deterministic best-hit logic, and score ≥{config.M_VALUE}. "
+        "No new multiple-testing adjustment is introduced. Subthreshold raw scores "
+        "remain available. Unknown/unscorable negative DNA stops publication.",
         "",
-        "Both scans use `motifs.score_sequences`, the same MA0138.2 matrix, both strands, "
-        f"FIMO `--text --thresh 1`, and best score ≥{config.M_VALUE}. Ties use p-value, "
-        "start, stop and strand in the shared helper. Larger windows have more opportunities "
-        "to exceed the same threshold; no multiple-testing adjustment is added to either path.",
+        f"Midpoint windows are exactly 101 bp; {int(valid.center_extends_outside_gap.sum())} "
+        "extend into anchors because the gap is shorter. They are explicitly flagged. "
+        "No chromosome-end clipping is allowed. Sub-21 bp whole gaps cannot contain "
+        "this complete motif; their scores stay missing with shorter_than_motif basis.",
         "",
-        f"Midpoint windows are exactly {WINDOW_BP} bp, with half-base ties rounded down. "
-        f"Accepted gaps shorter than {WINDOW_BP} bp: "
-        f"{int(valid.center_extends_outside_gap.sum())}. For these, the "
-        "midpoint windows extend into the anchors, explicitly flagged "
-        "per element. They are not a strict subset of the whole-gap scan. "
-        "No chromosome-end clipping is allowed. A sub-21 bp whole gap cannot fit this motif; "
-        "its score remains missing, with basis `shorter_than_motif`. An unexplained missing "
-        "FIMO hit or ambiguous negative sequence stops publication, never becomes a loss.",
-        "",
-        "### Width strata at the selected flank",
+        "## Width strata",
         "",
         markdown(pd.DataFrame(strata)),
         "",
-        "### Every accepted interval and both best scores",
+        "## Every accepted region",
         "",
         markdown(
             valid[
@@ -574,43 +557,32 @@ def render(
             ]
         ),
         "",
-        "## Downstream meaning",
-        "",
-        "Existing `classify.OrthologState` can absorb all three states; no enum extension "
-        "is needed. The output supplies **separate** `whole_ortholog_state` and "
-        "`center_ortholog_state` columns, plus `search_space_sensitive`; consumers must "
-        "choose an analysis explicitly. Existing MAPPED outputs are not rewritten.",
+        "## Downstream contract",
         "",
         markdown(
             pd.DataFrame(
-                [{"rescue_state": k, "classify_state": str(v)} for k, v in STATE_MAP.items()]
+                [dict(regional_result=k, ortholog_state=str(v)) for k, v in STATE_MAP.items()]
             )
         ),
         "",
-        "`failed_lift` preserves unresolved evidence in classification and never enters "
-        "`no_motif_species`. `lifted_unscorable` remains appropriate for future unscorable "
-        "anchored DNA; this run refuses publication if encountered rather than forcing it "
-        "into the requested three-state partition. `ABSENT_CONFIRMED` means no full motif "
-        "above the cutoff in the anchored region, not experimental proof of functional loss. "
-        "Synteny is inferred from these anchors; independent chains could still mispair. "
-        "A retained PWM match does not demonstrate REST binding.",
+        "Both accepted regional states map conservatively to lifted_unscorable: motif "
+        "correspondence is unresolved. NO_SYNTENY maps to failed_lift, never lifted_no_motif. "
+        "The complete pilot evidence layer additionally checks human canonical-site strength, "
+        "chain consistency and anchor inner-edge trimming for all accepted regions. "
+        "Use its comparison_status and eligibility columns for human-to-target contrasts; "
+        "weak human sites are retained separately. "
+        "No REST binding or evolutionary direction is inferred.",
         "",
-        "## Outputs and reproduction",
+        "## Files and reproduction",
         "",
-        f"`{prefix}.resolved.csv` contains all {len(result)} original ABSENT IDs, both scans, "
-        "coordinates, widths, best hits, states and failure reasons. "
-        f"`{prefix}.flank{{500,1000,2000}}.csv` and `{prefix}.sweep.csv` retain the sweep; "
-        f"`{prefix}.work/` retains BEDs, lifted/unmapped records, FASTAs and command logs.",
+        f"{prefix}.resolved.csv retains every input ID. {prefix}.flank{{500,1000,2000}}.csv "
+        f"and {prefix}.sweep.csv preserve geometry; "
+        f"{prefix}.work/ holds BEDs, lifts, FASTAs and logs. "
+        "The generic CLI accepts assembly, chain, genome and output prefix. "
+        "make pilot-rescue refreshes this stage; make pilot-validate refreshes all upstream "
+        "stages and the final human/target evidence layer. No downloads are performed.",
         "",
-        "Run `make pilot-rescue` with liftOver, twoBitInfo, twoBitToFa and FIMO on PATH. "
-        "The generic CLI accepts assembly, chain, genome, prefix, baseline and report paths. "
-        "It requires cached source/target chromosome sizes and target publisher MD5 metadata "
-        "(overridable CLI paths); it downloads nothing. It checks the genome MD5 and "
-        "twoBitInfo sizes, baseline IDs/statuses, and baseline report input hashes. "
-        "Published CSVs/report are staged after successful computation. No timestamps or "
-        "random sampling enter the output. Tool hashes below pin executable versions.",
-        "",
-        markdown(pd.DataFrame([{"input_or_tool": k, "MD5": v} for k, v in fingerprints.items()])),
+        markdown(pd.DataFrame([dict(input_or_tool=k, MD5=v) for k, v in fingerprints.items()])),
         "",
     ]
     return "\n".join(lines)
@@ -626,7 +598,7 @@ def main() -> None:
     parser.add_argument("--sidecar", type=Path, required=True)
     parser.add_argument("--source-elements", type=Path, default=config.HG38_ELEMENTS)
     parser.add_argument("--max-gap-bp", type=int, default=MAX_GAP_BP)
-    parser.add_argument("--expected-absent", type=int, required=True)
+    parser.add_argument("--expected-absent", type=int)
     parser.add_argument("--baseline-scores", type=Path, required=True)
     parser.add_argument("--baseline-report", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
@@ -637,7 +609,8 @@ def main() -> None:
     args = parser.parse_args()
     sidecar = pd.read_csv(args.sidecar)
     elements = absent_elements(sidecar, pd.read_csv(args.source_elements), args.assembly)
-    assert len(elements) == args.expected_absent, "Unexpected ABSENT input count"
+    if args.expected_absent is not None:
+        assert len(elements) == args.expected_absent, "Unexpected ABSENT input count"
     if not args.genome.is_file():
         raise FileNotFoundError(args.genome)
     metadata = config.RAW_DIR / "genomes" / "verification"
@@ -726,7 +699,7 @@ def main() -> None:
         )
         for mode in ("whole", "center")
     }
-    result = resolve(selected, scans, args.expected_absent)
+    result = resolve(selected, scans, len(elements))
     report = render(
         result,
         summary,

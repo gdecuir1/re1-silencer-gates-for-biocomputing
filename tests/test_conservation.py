@@ -15,10 +15,10 @@ URLS = {
 
 
 def test_motif_coordinates_both_strands(intervals: pd.DataFrame) -> None:
-    """Inclusive offsets 91..111 become exactly 21 queried bases on either strand."""
+    """Inclusive offsets 90..110 become exactly 21 queried bases on either strand."""
     result = conservation.motif_windows(intervals)
-    assert result["start"].tolist() == [191, 488]
-    assert result["end"].tolist() == [212, 509]
+    assert result["start"].tolist() == [190, 489]
+    assert result["end"].tolist() == [211, 510]
     assert (result["end"] - result["start"]).eq(21).all()
 
 
@@ -43,8 +43,8 @@ def test_remote_exact_values_and_missingness(
     assert result.loc[0, "phyloP_mean"] == 2.0
     assert np.isnan(result.loc[1, "phyloP_mean"])
     for handle in handles:
-        assert handle.values.call_args_list[0].args == ("chrSynthetic", 191, 212)
-        assert handle.values.call_args_list[1].args == ("chrSynthetic", 488, 509)
+        assert handle.values.call_args_list[0].args == ("chrSynthetic", 190, 211)
+        assert handle.values.call_args_list[1].args == ("chrSynthetic", 489, 510)
         handle.close.assert_called_once()
     assert check.call_count == 2
     assert [call.args[0] for call in opened.call_args_list] == list(URLS.values())

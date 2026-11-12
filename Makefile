@@ -1,7 +1,7 @@
 PYTHON ?= python
 CONDA ?= conda
 
-.PHONY: env test lint clean assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo pilot-rescue
+.PHONY: env test lint clean assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo pilot-rescue pilot-validate
 
 env:
 	$(CONDA) env create -f environment.yml
@@ -46,7 +46,13 @@ pilot-rescue:
 		--baseline-scores data/processed/pilot_mouse/fimo_scores.csv \
 		--baseline-report results/tables/pilot_mouse_fimo.md \
 		--output-prefix data/processed/pilot_mouse_rescue/rescue \
-		--report results/tables/pilot_mouse_rescue.md --expected-absent 158
+		--report results/tables/pilot_mouse_rescue.md
+
+# Rebuild in dependency order even with make -j; publish the evidence layer last.
+pilot-validate: pilot-orthologs
+	$(MAKE) pilot-fimo
+	$(MAKE) pilot-rescue
+	$(PYTHON) -m src.pilot_evidence
 
 # Only disposable Python/tool caches; never data, results, or environments.
 clean:

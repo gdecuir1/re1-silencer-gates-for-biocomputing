@@ -8,6 +8,8 @@
 !/results/**/README.md
 !/results/**/.gitkeep
 !/results/folds/**
+# Immutable local run snapshots, including copied README files.
+/results/archive/
 
 # Large genomic formats, wherever they land
 *.fa
