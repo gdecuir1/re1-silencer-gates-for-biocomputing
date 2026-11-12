@@ -17,6 +17,7 @@ This repository connects published reporter measurements, verified human sequenc
 - [The question](#the-question)
 - [Approach and pipeline](#approach-and-pipeline)
 - [Results](#results)
+- [Next steps and study priorities](#next-steps-and-study-priorities)
 - [Design decisions and why](#design-decisions-and-why)
 - [Verification](#verification)
 - [Reproducing](#reproducing)
@@ -210,6 +211,23 @@ The prior code and output files are preserved with a SHA-256 manifest in `result
 | Candidate prioritization | Research design and explicit metric interfaces | Define and implement gate-quality metrics, rank candidates, and test experimentally |
 
 Model-training functions in [`src/models.py`](src/models.py) and gate-quality functions in [`src/metrics.py`](src/metrics.py) intentionally raise `NotImplementedError`. `make pilot-validate` rebuilds and validates sequence evidence; consolidated activity validation (`src/validate.py` / `make validate`) remains unimplemented. A configuration constant or tested helper is not a completed biological analysis.
+
+## Next steps and study priorities
+
+**Start with the 20 retention candidates, then study the 18 nonretention candidates and resolve the 63 uncertain cases, before expanding to the 289 weak human sites.** These four groups account for all 390 pilot elements. Their definitions come from the [current evidence report](results/tables/pilot_mouse_evidence.md) and [`comparison`](src/pilot_evidence.py); the work below is planned, not completed.
+
+Here, a **strong human site** means the exact 21 bp canonical core scores **≥20.86** with MA0138.2. A nearby hit cannot substitute for that core. **Intact correspondence** requires a unique matching chain shared by the element and motif, all 21 human motif bases aligned, and no inserted mouse bases between them. This establishes a sequence comparison, not REST binding or repression.
+
+| Priority and group | Why these elements belong here | Next work |
+| --- | --- | --- |
+| **1. 20 retention candidates** (`RETAINED_CANDIDATE`) | Both the human core and corresponding mouse core score ≥20.86, with intact correspondence. | Build the first candidate review table: IDs, paired sequences, scores, alignment evidence, and published human reporter activity by cell type and enhancer context. Resolve activity sign and aggregation before ranking; prioritize reproducible measured human repression for follow-up. |
+| **2. 18 nonretention candidates** (`NONRETENTION_CANDIDATE`) | The human core scores ≥20.86 and correspondence is intact, but both the mouse core and its surrounding scan window score below threshold. | Compare their human reporter activity with the retention group while accounting for human motif score and assay context. Inspect sequence differences and additional species before proposing an evolutionary history; a human-positive/mouse-negative pair alone cannot establish loss. |
+| **3. 63 unresolved elements** (`UNRESOLVED`) | The human core is strong, but the available alignment or scoring evidence does not support a direct motif comparison. Current reasons include disrupted alignments, missing correspondence, single-track mappings, and regional anchors only. | Review chain blocks, gaps, trimming, and flanking context; seek additional alignment evidence where needed. Keep each uncertainty explicit until resolved. The **one motif-positive rescue region** stays here because its hit has not been shown to correspond to the human motif. |
+| **4. 289 weak human sites** (`HUMAN_WEAK`) | The exact human core scores <20.86. This check takes precedence over mouse mapping status; these sites are not necessarily unmapped or biologically inactive. | Retain them for secondary repression analyses, including nearby motifs and activity despite a weak canonical core. Keep them outside the strong-human retention/nonretention contrast: without a strong starting motif, a negative mouse scan does not establish loss of that motif. |
+
+For the first group, the immediate deliverable is an evidence-backed shortlist, with missing activity kept explicit. Proposed functional follow-up would compare human and mouse sequences and motif-disrupted controls under defined REST conditions. Any claim of a transcriptional NOT gate will require measured input-dependent repression, leakiness, and dynamic range; motif retention alone does not establish those properties.
+
+Use `comparison_status`, `eligible_for_direct_comparison`, and `comparison_reason` in [`calls.csv`](data/processed/pilot_mouse_evidence/calls.csv) to select groups. Preserve all rows and raw evidence; neither raw mapping `ABSENT` nor a below-threshold regional scan is a biological-loss label. Additional-species analysis and broader model evaluation should retain these distinctions.
 
 ## Design decisions and why
 
@@ -407,7 +425,7 @@ Do not stage downloaded/generated data or change historical ledger rows. Downloa
 | [UCSC hg38 reference](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/) and [mm39 reference](https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/) | `.2bit` DNA, chromosome sizes, publisher checksums | Required references pass the [mouse gate](results/tables/pilot_mouse_lift.md) |
 | [UCSC hg19 chains](https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/) and [hg38 chains](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/) | Human assembly conversion and comparative interval projection | hg19→hg38 and hg38→mm39 used; exact input digests in their reports |
 | [UCSC hg19 RepeatMasker](https://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/rmsk.txt.gz) | Repeat-overlap diagnostic for human conversion | Used in [attrition comparison](results/tables/liftover_hg19_to_hg38.md) |
-| [JASPAR](https://jaspar.elixir.no/) | Intended REST motif input | Production matrix/scoring validation remains outstanding |
+| [JASPAR](https://jaspar.elixir.no/) | REST motif matrix MA0138.2 | Used for human/mouse scoring; coordinates and score scale checked against [published reference fixtures](references/README.md) |
 | [ENCODE](https://www.encodeproject.org/) and publication supplements | Intended cofactor/accessibility evidence and accession reconciliation | No validated production feature set reported |
 | UCSC phyloP/phastCons tracks | Intended conservation features | Remote-reading helper exists; specific track URLs remain unset |
 | [Author duoREST repository](https://github.com/tewhey-lab/duoREST) | Reference implementation for understanding the published analysis | External reference, not an executed dependency of this workflow |
@@ -416,7 +434,7 @@ Do not stage downloaded/generated data or change historical ledger rows. Downloa
 
 - **Mouri et al.** *Whole-genome functional characterization of RE1 silencers using a modified massively parallel reporter assay.* Primary assay and sequence source. [Article and supplements](https://pmc.ncbi.nlm.nih.gov/articles/PMC9903721/) · [DOI](https://doi.org/10.1016/j.xgen.2022.100234)
 - **UCSC Genome Browser.** Reference assemblies, chains, sequence API, and liftOver parameter semantics. [Downloads](https://hgdownload.soe.ucsc.edu/downloads.html) · [API](https://genome.ucsc.edu/goldenPath/help/api.html) · [minMatch explanation](https://groups.google.com/a/soe.ucsc.edu/g/genome/c/YbyOe7AEXj4)
-- **MEME Suite FIMO.** Motif-scanning software used by the implemented wrapper; production scoring is pending. [Documentation](https://meme-suite.org/meme/doc/fimo.html)
+- **MEME Suite FIMO.** Motif-scanning software used for the completed human/mouse pilot scoring. [Documentation](https://meme-suite.org/meme/doc/fimo.html)
 - **pyBigWig.** Indexed remote conservation-track access. [Project documentation](https://github.com/deeptools/pyBigWig)
 - **CD-HIT.** Sequence-clustering software used by the fold-construction helper. [Project documentation](https://github.com/weizhongli/cdhit)
 
