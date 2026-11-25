@@ -203,16 +203,20 @@ The prior code and output files are preserved with a SHA-256 manifest in `result
 
 | Component | Completed work | Remaining work |
 | --- | --- | --- |
-| Inputs and assemblies | GEO inspection; sampled source-assembly discrimination; exhaustive human conversion and sequence verification | Resolve activity aggregation, missing measurements, repression sign, and repression-call definitions |
+| Inputs and assemblies | GEO inspection; verified human conversion; continuous activity dataset with separate enhancer contexts, matched baselines and explicit missingness | Join phyloP features; define scales for eventual gate metrics; binary silencer labels remain unverified and unused |
 | Mouse pilot | Corrected motif coordinates, reference checks, dual-track lift, human/mouse FIMO, flank sweep, chain-block evidence and all-element comparison table | Review uncertain alignments and test functional interpretations |
 | Comparative features | Generic lift and chain-evidence helpers; validated motif inputs/score scale; conservation helper | Select conservation tracks, acquire/validate cofactor accessions, run remaining species |
 | Evolutionary classification | Explicit conservative mouse evidence adapter and eligibility mask | Extend to other species and establish ancestral states; candidates are not demonstrated evolutionary losses |
 | Predictive evaluation | Chromosome/sequence-cluster fold builder and evaluator for supplied predictions | Produce real fold assignments, implement training, fit held-out models, and estimate performance |
 | Candidate prioritization | Research design and explicit metric interfaces | Define and implement gate-quality metrics, rank candidates, and test experimentally |
 
-Model-training functions in [`src/models.py`](src/models.py) and gate-quality functions in [`src/metrics.py`](src/metrics.py) intentionally raise `NotImplementedError`. `make pilot-validate` rebuilds and validates sequence evidence; consolidated activity validation (`src/validate.py` / `make validate`) remains unimplemented. A configuration constant or tested helper is not a completed biological analysis.
+Model-training functions in [`src/models.py`](src/models.py) and gate-quality functions in [`src/metrics.py`](src/metrics.py) intentionally raise `NotImplementedError`. `make pilot-validate` rebuilds sequence evidence; `make dataset` builds and validates continuous observations through [`src/dataset.py`](src/dataset.py). A configuration constant or tested helper is not a completed biological analysis.
 
 ## Next steps and study priorities
+
+**Continuous analysis authorized by explicit user override.** The [validation report](results/tables/scoring_validation.md) confirms activity identity with GEO, activity direction in all four cells, and exact agreement with all 7,005 available published canonical-site scores. The unreproduced Figure 2B binary labels remain a limitation; this project does not consume them. The override and reason are retained in `data/processed/scoring_validation/gate.json`, with the original failed finding preserved.
+
+`make dataset` now builds **267,440 source observations** at element × cell type × enhancer resolution in `data/processed/analysis_dataset.csv`. Repression is the **same-cell, same-enhancer NegCtrl median minus raw activity**, so positive means greater repression. Enhancers stay separate, and missing activity stays missing. The [analysis dataset report](results/tables/analysis_dataset.md) ranks all 20 contexts by measured score–repression correlation and records baseline spread, source accounting and recommendations. Verified hg38 coordinates support a later phyloP join; conservation extraction is not part of this target.
 
 **Start with the 20 retention candidates, then study the 18 nonretention candidates and resolve the 63 uncertain cases, before expanding to the 289 weak human sites.** These four groups account for all 390 pilot elements. Their definitions come from the [current evidence report](results/tables/pilot_mouse_evidence.md) and [`comparison`](src/pilot_evidence.py); the work below is planned, not completed.
 
@@ -220,7 +224,7 @@ Here, a **strong human site** means the exact 21 bp canonical core scores **≥2
 
 | Priority and group | Why these elements belong here | Next work |
 | --- | --- | --- |
-| **1. 20 retention candidates** (`RETAINED_CANDIDATE`) | Both the human core and corresponding mouse core score ≥20.86, with intact correspondence. | Build the first candidate review table: IDs, paired sequences, scores, alignment evidence, and published human reporter activity by cell type and enhancer context. Resolve activity sign and aggregation before ranking; prioritize reproducible measured human repression for follow-up. |
+| **1. 20 retention candidates** (`RETAINED_CANDIDATE`) | Both the human core and corresponding mouse core score ≥20.86, with intact correspondence. | Join the continuous dataset to paired sequences, scores and alignment evidence for the first candidate review table. Keep each cell/enhancer separate and prioritize measured context-matched repression for follow-up. |
 | **2. 18 nonretention candidates** (`NONRETENTION_CANDIDATE`) | The human core scores ≥20.86 and correspondence is intact, but both the mouse core and its surrounding scan window score below threshold. | Compare their human reporter activity with the retention group while accounting for human motif score and assay context. Inspect sequence differences and additional species before proposing an evolutionary history; a human-positive/mouse-negative pair alone cannot establish loss. |
 | **3. 63 unresolved elements** (`UNRESOLVED`) | The human core is strong, but the available alignment or scoring evidence does not support a direct motif comparison. Current reasons include disrupted alignments, missing correspondence, single-track mappings, and regional anchors only. | Review chain blocks, gaps, trimming, and flanking context; seek additional alignment evidence where needed. Keep each uncertainty explicit until resolved. The **one motif-positive rescue region** stays here because its hit has not been shown to correspond to the human motif. |
 | **4. 289 weak human sites** (`HUMAN_WEAK`) | The exact human core scores <20.86. This check takes precedence over mouse mapping status; these sites are not necessarily unmapped or biologically inactive. | Retain them for secondary repression analyses, including nearby motifs and activity despite a weak canonical core. Keep them outside the strong-human retention/nonretention contrast: without a strong starting motif, a negative mouse scan does not establish loss of that motif. |
@@ -451,7 +455,7 @@ Project measurements in this README are linked to files in `results/tables/`. Th
 | MAPPED is not motif retention | Partial motif-window alignment and sequence changes remain possible; a successful lift does not establish REST binding |
 | Target-span distortion | Long or shortened spans can complicate rescoring; width flags remain available for sensitivity analyses |
 | Pilot selection | A canonical-element chromosome pilot establishes an executable path, not generalization to other chromosomes, contrast elements, or species |
-| Assay outcome not finalized | Enhancer-context handling, missingness, repression sign, and positive-label definitions must be settled before fitting models; left-tail repression has not yet been validated |
+| Continuous outcome versus binary labels | Context-matched repression and missingness are defined in the analysis dataset; Figure 2B binary labels remain unverified and unused. Gate-performance scales and on/off states still require definition |
 | Repeat overlap is a proxy | The conversion diagnostic does not directly label primate-specific elements or rule out differential evolutionary-class attrition |
 | Conservation is observational | Predictive improvement, if found, would not establish that evolutionary retention causes repression |
 | Evaluation remains unrun | Grouped folds and metric functions cannot establish out-of-sample performance until real inputs, models, and held-out predictions exist |

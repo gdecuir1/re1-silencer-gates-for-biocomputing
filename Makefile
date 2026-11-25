@@ -1,7 +1,7 @@
 PYTHON ?= python
 CONDA ?= conda
 
-.PHONY: env test lint clean assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo pilot-rescue pilot-validate
+.PHONY: env test lint clean assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo pilot-rescue pilot-validate dataset
 
 env:
 	$(CONDA) env create -f environment.yml
@@ -53,6 +53,10 @@ pilot-validate: pilot-orthologs
 	$(MAKE) pilot-fimo
 	$(MAKE) pilot-rescue
 	$(PYTHON) -m src.pilot_evidence
+
+# Offline continuous measurements, one row per element/cell/enhancer.
+dataset:
+	$(PYTHON) -m src.dataset
 
 # Only disposable Python/tool caches; never data, results, or environments.
 clean:
