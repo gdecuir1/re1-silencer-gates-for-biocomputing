@@ -36,8 +36,12 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def read_source():
-    """Read every selected source row; require exact GEO/author identity."""
+def read_source(*, populations=POPULATIONS, include_uncertainty=False):
+    """Read selected source rows with exact GEO/author identity.
+
+    Gate analysis explicitly requests scrambled populations and published lfcSE;
+    the default continuous dataset's populations and columns remain unchanged.
+    """
     frames, inventory = [], []
     sources = json.loads((RAW / "sources.json").read_text())
     with tarfile.open(GEO_ARCHIVE) as archive:
@@ -51,7 +55,10 @@ def read_source():
             if digest(path) != sources[path.name]["sha256"]:
                 raise ValueError(f"Author source hash mismatch: {path}")
             author = pd.read_csv(
-                path, sep="\t", usecols=["ID", "project", "log2FoldChange", "padj"]
+                path,
+                sep="\t",
+                usecols=["ID", "project", "log2FoldChange", "padj"]
+                + (["lfcSE"] if include_uncertainty else []),
             )
             merged = geo.merge(
                 author,
@@ -69,11 +76,18 @@ def read_source():
                 raise ValueError(f"GEO and author activity/ID mismatch in {cell}")
             if not merged.project.eq(merged.project_author).all():
                 raise ValueError(f"Population disagreement in {cell}")
+            if include_uncertainty:
+                equal_se = merged.lfcSE.eq(merged.lfcSE_author) | (
+                    merged.lfcSE.isna() & merged.lfcSE_author.isna()
+                )
+                if not equal_se.all():
+                    raise ValueError(f"GEO and author uncertainty mismatch in {cell}")
             if not merged.id.eq(merged.enhancer + "^" + merged.silencer).all():
                 raise ValueError("Construct ID disagrees with explicit source metadata")
             selected = merged.loc[
-                merged.project.isin(POPULATIONS),
-                ["id", "silencer", "project", "enhancer", "log2FoldChange", "padj"],
+                merged.project.isin(populations),
+                ["id", "silencer", "project", "enhancer", "log2FoldChange", "padj"]
+                + (["lfcSE"] if include_uncertainty else []),
             ]
             selected = selected.rename(
                 columns={

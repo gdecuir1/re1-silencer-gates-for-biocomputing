@@ -1,7 +1,7 @@
 PYTHON ?= python
 CONDA ?= conda
 
-.PHONY: env assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo pilot-rescue pilot-validate scoring-validation dataset test lint clean
+.PHONY: env assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo pilot-rescue pilot-validate scoring-validation dataset gate-metrics test lint clean
 
 # Environment and explicit acquisition
 # Data targets below are offline; fetch commands are separate:
@@ -67,8 +67,12 @@ scoring-validation:
 dataset:
 	$(PYTHON) -m src.dataset
 
+# Reporter operating regions from matched scrambled/NegCtrl ON states; no enhancer pooling.
+gate-metrics:
+	$(PYTHON) -m src.gate_metrics
+
 # Unimplemented production stages: conservation/cofactors -> grouped folds -> models
-# -> gate metrics -> variant robustness. No placeholder target claims completion.
+# -> variant robustness. No placeholder target claims completion.
 # Conservation and fold helpers exist; species expansion also lacks a production target.
 
 # Verification and disposable caches

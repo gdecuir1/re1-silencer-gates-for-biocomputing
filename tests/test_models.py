@@ -52,9 +52,6 @@ def test_stubs_raise() -> None:
         (models.motif_conservation, (frame, series, series)),
         (models.motif_cofactor, (frame, series, series)),
         (models.gapped_kmer_svm, (Path("synthetic_unused.fa"), frame, frame)),
-        (metrics.dynamic_range, (series, series)),
-        (metrics.off_state_leakiness, (series, series)),
-        (metrics.separation, (frame, frame)),
         (metrics.variant_robustness, (series, frame)),
     ]:
         with pytest.raises(NotImplementedError):
