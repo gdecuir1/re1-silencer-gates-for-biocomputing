@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """Recover base-level evidence behind interval liftOver results.
 
 A successful BED lift is a bounding interval, not a guarantee that every source

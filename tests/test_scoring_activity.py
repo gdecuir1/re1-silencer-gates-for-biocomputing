@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scripts.validate_scoring_activity import CELLS, aggregate, bins, sign_check, stats
+from src.scoring_validation import CELLS, aggregate, bins, sign_check, stats
 
 
 def observations():

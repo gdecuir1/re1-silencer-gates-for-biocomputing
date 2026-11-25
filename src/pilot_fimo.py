@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """Score lifted mouse motif windows with FIMO and record presence at M_VALUE.
 
 The repeatable entry point is ``python -m src.pilot_fimo`` or ``make pilot-fimo``.

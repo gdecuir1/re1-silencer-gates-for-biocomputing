@@ -1,294 +1,148 @@
 # RE1 Silencer Gates
 
-**Comparative genomics for prioritizing human RE1 silencers as candidate transcriptional NOT-gate components.**
+## Findings
+
+- **Exact motif scoring:** all **7,005 of 7,005** published canonical-site scores match after correcting the motif offset to **(90, 110)**.
+- **m-value enrichment:** at **20.86**, diagnostic negative-activity calls are enriched **5.24×** in HepG2, **4.74×** in SK-N-SH, **6.95×** in K562 and **1.11×** in GM12878.
+- **Enhancer context changes repression:** the SK-N-SH motif-versus-noMotif gap is **0.74** with En02 and **−0.01** with En21; score–repression correlations span **0.57 to 0.28** across **20** contexts.
+- **Chain-only classification mixes distinct evidence:** the **390** mouse-pilot elements resolve into **20 retention candidates, 18 nonretention candidates, 63 unresolved and 289 human-weak sites**.
+
+**Comparative genomics and reporter assays for prioritizing RE1 silencers as candidate transcriptional NOT-gate components.**
 
 Gabrielle DeCuir and Vrinda Sehgal · Johns Hopkins Applied Comparative Genomics
 
-## What this is
+## The question and current state
 
-This repository connects published reporter measurements, verified human sequences, and comparative genome mappings to ask which RE1 elements merit experimental follow-up. RE1 is a binding site for the transcriptional repressor REST. The source experiment, MPRAduo, measures regulatory activity in an enhancer–silencer reporter context. The engineering motivation is to identify candidates whose repression could be useful in transcriptional circuits. Reporter activity alone does not demonstrate a working gate. [Source study](https://pmc.ncbi.nlm.nih.gov/articles/PMC9903721/)
+RE1 is a DNA binding site for the transcriptional repressor REST. This project asks whether sequence conservation adds predictive information about human RE1-mediated repression beyond the REST motif score. The source MPRAduo experiment measures reporter activity with a silencer paired to an enhancer. The engineering goal is a defensible candidate list for experimental testing.
 
-**The completed workflow reaches human/mouse motif scoring and explicit comparison eligibility for the mouse pilot.** It has produced **12,815 sequence-verified hg38 elements**, selected **390 canonical chr8 elements**, and extracted **219 mouse sequences** after correcting the motif coordinates. The current comparison table contains **289 weak human sites, 63 unresolved cases, 20 retention candidates and 18 nonretention candidates**. These are sequence-evidence categories; evolutionary loss, predictive performance and gate behavior have not been established. [Current evidence report](results/tables/pilot_mouse_evidence.md) [Human conversion](results/tables/liftover_hg19_to_hg38.md) · [Pilot](results/tables/pilot_setup.md) · [Mouse ortholog sequences](results/tables/pilot_mouse_orthologs.md)
+The completed analyses establish sequence-verified human coordinates, a mouse comparison pilot, validated motif scores, and a continuous activity dataset. Human assembly conversion retained **12,815 of 12,866** native elements. The analysis dataset preserves **267,440** source observations at **element × cell type × enhancer** resolution, including missing measurements. The mouse classification track is **complete and frozen at pilot scope**; conservation features, predictive models and gate-performance analyses remain open. [Human conversion](results/tables/liftover_hg19_to_hg38.md) · [Analysis dataset](results/tables/analysis_dataset.md)
 
-> **Coordinate contract:** published native coordinates are hg19. Downstream genomic work uses `data/processed/elements_hg38.csv`, whose retained sequences were verified against hg38. Original hg19 coordinates remain as traceability fields. Element IDs retain their original names and may contain hg19 coordinate text; never reconstruct working coordinates from an ID.
-
-### Contents
-
-- [The question](#the-question)
-- [Approach and pipeline](#approach-and-pipeline)
-- [Results](#results)
-- [Next steps and study priorities](#next-steps-and-study-priorities)
-- [Design decisions and why](#design-decisions-and-why)
-- [Verification](#verification)
-- [Reproducing](#reproducing)
-- [Repository layout](#repository-layout)
-- [Data sources](#data-sources)
-- [References](#references)
-- [Scope and known limitations](#scope-and-known-limitations)
-- [Team](#team)
-
-## The question
-
-**Do evolutionary retention and sequence conservation help predict human RE1-mediated repression beyond the information in REST motif score?**
-
-The proposed comparison is a motif-only baseline against models that also use conservation, cross-species motif evidence, or cofactor features. Evaluation should hold out related genomic and sequence groups together. Any resulting ranking would prioritize candidates for experiments, rather than establish their circuit performance or the causal effect of evolutionary age.
-
-The source cell types are **GM12878, HepG2, K562, and SK-N-SH**. The native populations are canonical-motif elements (`project == "motif"`) and REST-peak elements without the canonical motif (`project == "noMotif"`). The contrast population is retained in the verified human dataset but excluded from the canonical-element pilot. [Population and cell-table evidence](results/tables/coordinate_assembly.md) · [Pilot selection](results/tables/pilot_setup.md)
-
-## Approach and pipeline
-
-### Observation units and coordinate conventions
-
-The GEO archive contains processed construct-level activity and genomic intervals, despite its `RAW.tar` filename. A construct row is not an independent genomic element: enhancer contexts and cell types can share an element. In the native WGREST tables, `silencer` identifies the element, while `id` identifies the construct; `log2FoldChange` and `lfcSE` are published activity fields. Collapsing identical coordinate metadata for sequence work does **not** aggregate activity. The full schema inventory is available in the [local report directory](results/tables/) and indexed by the [data catalog](data/README.md).
-
-The coordinate workflow uses zero-based, half-open BED intervals. Human elements are **200 bp**. `MOTIF_SPAN=(90, 110)` uses zero-based, **inclusive** endpoints, giving a **21 bp** window. For an element `[s,e)`, the motif BED is `[s+90,s+111)` on the plus strand and `[e-111,e-90)` on the minus strand. The authors' FIMO positions 91–111 are one-based; five published oligos and scores independently validate this conversion and the score scale. [Reference fixtures](references/README.md) [Conversion contract](results/tables/liftover_hg19_to_hg38.md) · [Motif-window contract](results/tables/pilot_mouse_orthologs.md)
-
-### Implemented stages, in dependency order
-
-Paths below are relative to the repository root. Each automated data target prints results and writes its Markdown report.
-
-| Stage | Input | Method and parameters | Principal outputs | Make target | Evidence |
-| --- | --- | --- | --- | --- | --- |
-| Inspect published inputs | GEO supplementary archive and processed tables | Inspect actual archive members, schemas, activity fields, coordinates, and native populations | Downloaded GEO inputs; schema and row-count inventory | No dedicated target; inspection is recorded, not an automated discovery command | GEO inventory in [report directory](results/tables/), indexed in [data catalog](data/README.md) |
-| Resolve source assembly | Native GEO intervals, Table S2 oligos, cached UCSC reference queries | Deterministically sample before reference comparison; exact full-length equality in either orientation at unchanged coordinates | `results/tables/coordinate_assembly_comparisons.csv` | `make assembly-check` | [Assembly evidence](results/tables/coordinate_assembly.md) |
-| Convert and verify human elements | Reconciled library sequences, hg19 intervals, hg19→hg38 chain, hg38 reference, hg19 RepeatMasker | Default `minMatch=0.95`; exact sequence verification; retain every failure and compare repeat-associated attrition | `data/processed/elements_hg38.csv`; BEDs, FASTA, and complete audit in `data/processed/liftover_hg19_to_hg38/` | `make lift` | [Conversion report](results/tables/liftover_hg19_to_hg38.md) |
-| Select pilot | Verified hg38 CSV and hg38 reference | Verify required genome; select canonical chr8 elements; assert interval widths; extract a fixed random sample for exact sequence regression | `data/processed/pilot_chr8.bed`; evidence in `data/processed/pilot_setup/` | `make pilot` | [Pilot report](results/tables/pilot_setup.md) |
-| Evaluate mouse mapping | Pilot BED, hg38→mm39 chain, hg38/mm39 references | Sweep `minMatch` over 0.95, 0.5, 0.2, 0.1; retain failures and width flags; repeat configured value for final output | `data/processed/pilot_mouse/sweep.csv`; per-threshold directories; `final/lifted.mm39.bed`, `final/unmapped.hg38.bed`, `final/element_audit.csv` | `make pilot-mouse` | [Mouse lift report](results/tables/pilot_mouse_lift.md) |
-| Resolve motif coverage and extract mouse DNA | Pilot, final element-track outputs, same chain and references | Lift motif windows independently at 0.5; join by ID; validate concordance; extract MAPPED element spans with 15 bp padding per side | `data/processed/pilot_mouse/orthologs.mm39.fa`, `orthologs.mm39.csv`; both motif lift outputs and extraction evidence | `make pilot-orthologs` | [Ortholog sequence report](results/tables/pilot_mouse_orthologs.md) |
-| Score mapped mouse windows | Corrected sidecar, MA0138.2, mouse genome | Shared FIMO best-hit scoring, m-value 20.86 | `data/processed/pilot_mouse/fimo_scores.csv` | `make pilot-fimo` | [Raw scores](results/tables/pilot_mouse_fimo.md) |
-| Inspect unmapped regions | Neither-track-lifted cohort, source flanks, chain and genome | 500/1000/2000 bp flank sweep; whole-gap and midpoint scans | `data/processed/pilot_mouse_rescue/rescue.resolved.csv` | `make pilot-rescue` | [Regional evidence](results/tables/pilot_mouse_rescue.md) |
-| Validate source and correspondence | All preceding evidence, human genome, published fixtures | Human core/window/element scoring, target-core scoring, chain blocks and explicit uncertainty | `data/processed/pilot_mouse_evidence/calls.csv` | `make pilot-validate` | [Comparison report](results/tables/pilot_mouse_evidence.md) |
-
-`make pilot-validate` rebuilds these upstream stages, then runs baseline FIMO, flank rescue and the human/target evidence layer in order. `python -m src.pilot_evidence --check` checks its input/output hashes.
-
-`make pilot-orthologs` invokes `make pilot-mouse`, which invokes `make pilot`. The human conversion is an explicit upstream handoff; downstream targets do not relift hg19. All these Make data targets are offline. Acquisition is separate.
-
-### Genome dependencies
-
-A gate verifies only the references used by that step, with the same integrity checks regardless of scope. Missing or changing unrelated downloads do not block the pilot.
-
-| Step | Required references | Operational status |
-| --- | --- | --- |
-| Pilot selection, BED writing, human regression | hg38 | Implemented and run |
-| Mouse sweep, motif-window mapping, mouse extraction | hg38 and mm39 | Implemented and run |
-| Full comparative workflow | hg38 plus rheMac10, mm39, canFam6, bosTau9, monDom5 | Dependency policy defined; full analysis not run |
-
-See [pilot dependency policy](results/tables/pilot_setup.md) and [`verify_step`](src/pilot.py). Verification never downloads or repairs a genome. Independent genome acquisition remains owned by the manual download script.
+The assayed cells are GM12878, HepG2, K562 and SK-N-SH. The dataset contains canonical-site elements (`motif`), REST-peak elements without the canonical motif (`noMotif`), and negative controls (`NegCtrl`). All measured results below come from the linked reports; the [report index](results/README.md) distinguishes current evidence from superseded interpretations.
 
 ## Results
 
-### Source assembly: hg19, not hg38
+### Validated motif scoring and the m-value relationship
 
-Published oligos from Table S2 were compared with reference DNA extracted at the **unchanged published interval numbers**. Sampling selected a directly name-matched element from each available chromosome/population group, ordered by start and ID before querying the reference. Both orientations were tested by exact equality; no alignment tolerance or motif score entered the decision.
+Scoring was checked before biological interpretation: **7,005 of 7,005 published canonical-site scores match exactly** after correcting the motif offset to **(90, 110), zero-based inclusive**. The fixed m-value is **20.86**. All **8,436** canonical sites were scored; **1,431** have no published canonical-position hit for direct comparison and were scored with uncensored FIMO rather than assigned zero. [Scoring validation](results/tables/scoring_validation.md)
 
-| Candidate assembly | Sampled oligos | Exact matches at published coordinates |
-| --- | ---: | ---: |
-| hg19 | 47 | 47 |
-| hg38 | 47 | 10 |
+Above-threshold sites show approximately fivefold enrichment for **diagnostic negative-activity calls** in HepG2 and SK-N-SH, and closer to sevenfold in K562; GM12878 changes little. The diagnostic is negative `log2FoldChange` with supplied `padj ≤ 0.01` in any measured enhancer context.
 
-This supports hg19 for the sampled native populations. It is not an assembly audit of every variant or library in the publication. Diagnostic flanking-coordinate comparisons are preserved in the [assembly report](results/tables/coordinate_assembly.md) and [individual comparison CSV](results/tables/coordinate_assembly_comparisons.csv).
+| Cell type | Diagnostic calls / tested below 20.86 | Fraction below | Diagnostic calls / tested at or above 20.86 | Fraction at or above | Diagnostic enrichment (fold) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| HepG2 | 433 / 6,207 | 0.07 | 635 / 1,736 | 0.37 | 5.24 |
+| SK-N-SH | 435 / 6,207 | 0.07 | 577 / 1,736 | 0.33 | 4.74 |
+| K562 | 71 / 6,207 | 0.01 | 138 / 1,736 | 0.08 | 6.95 |
+| GM12878 | 197 / 6,207 | 0.03 | 61 / 1,736 | 0.04 | 1.11 |
 
-The project converts to hg38 because its intended mammalian conservation tracks, ENCODE integration, and target-species chain workflow use hg38 as the common reference. Keeping the activity table in hg19 would require repeated coordinate reconciliation at later joins. The conversion is therefore performed once, with original coordinates preserved and a sequence-verified hg38 table as the downstream input. Exact conservation tracks and ENCODE accessions still need to be selected and validated.
+Source: the [fixed above/below split](results/tables/scoring_validation.md#fixed-abovebelow-split-diagnostic-calls-only). Enrichment ratios are calculated from those integer counts in [threshold_enrichment.md](results/tables/threshold_enrichment.md). The response rises broadly, with **no clear abrupt step exactly at 20.86**.
 
-### Human conversion and retention
+Continuous analysis is authorized by the recorded override in `data/processed/scoring_validation/gate.json`; scoring and sign checks remain required. The [scoring report](results/tables/scoring_validation.md) documents the decision.
 
-Sequence reconciliation recovered **9,792 exact-name matches** and **3,074 explicit aliases** from Table S2. Aliases are published tokens in oligo names, not names inferred from nearby coordinates. All **12,866** source intervals and library cores were **200 bp**; no adapters needed stripping. [Conversion report](results/tables/liftover_hg19_to_hg38.md)
+### Repression depends strongly on enhancer context
 
-The conversion keeps liftOver's same-species default, `minMatch=0.95`, and does not enable `-multiple`. It retains mapped and unmapped outputs, extracts hg38 DNA using `twoBitToFa -noMask`, uppercases library DNA, and compares both orientations by full-length exact equality. Only verified sequences enter the downstream CSV; the audit preserves mismatches, failed lifts, source coordinates, and reasons.
+**An RE1's effective dynamic range is a property of the silencer–enhancer pair rather than of the silencer alone.** In SK-N-SH, the motif-versus-noMotif median gap is **0.74** against En02 and **−0.01** against En21, in log2 activity units. The gap is `median(noMotif activity) − median(motif activity)`; a positive value means the motif population has lower activity. Averaging enhancers would hide this difference. [Context measurements](results/tables/analysis_dataset.md)
 
-| Population | Input | Lifted + verified | Lifted + mismatch | Failed to lift |
-| --- | ---: | ---: | ---: | ---: |
-| All native elements | 12,866 | 12,815 | 47 | 4 |
-| Canonical motif | 8,436 | 8,400 | 32 | 4 |
-| REST-peak/no-canonical-motif contrast | 4,430 | 4,415 | 15 | 0 |
+Within canonical elements, Spearman correlation between FIMO score and matched repression ranges from **0.57 to 0.28** across the **20** cell/enhancer combinations. The highest-ranked contexts are:
 
-**Conversion attrition is 0.40%**, calculated as `(47 + 4) / 12,866 × 100`, rounded from the report's exclusion counts. This is loss from the verified dataset, not evidence of evolutionary loss. The bucket sums are asserted for the complete input and each population. [Exhaustive accounting](results/tables/liftover_hg19_to_hg38.md)
+| Rank | Cell / enhancer | Measured motif elements | NegCtrl baseline | Motif-versus-noMotif gap | Spearman ρ |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1 | SK-N-SH / En02 | 7,602 | 0.02 | 0.74 | 0.57 |
+| 2 | SK-N-SH / En11 | 6,627 | 0.72 | 0.53 | 0.54 |
+| 3 | HepG2 / En02 | 7,602 | 0.10 | 0.86 | 0.53 |
+| 4 | HepG2 / En11 | 6,627 | 0.65 | 0.76 | 0.51 |
+| 5 | K562 / En02 | 7,602 | −0.02 | 0.56 | 0.51 |
+| 6 | HepG2 / En19 | 7,763 | 2.37 | 0.44 | 0.51 |
+| 7 | K562 / En11 | 6,627 | 1.19 | 0.43 | 0.50 |
+| 8 | GM12878 / En09 | 7,890 | 1.89 | 0.18 | 0.48 |
 
-| Sequence mismatch category | Elements |
-| --- | ---: |
-| Length differs | 13 |
-| One-base difference | 28 |
-| Multiple-base differences | 6 |
-| High divergence/unrelated, ambiguous bases, or unresolved adapters | 0 in each category |
+Baseline and gap are in log2 activity units; correlation is unitless. The [complete ranked table](results/tables/analysis_dataset.md#ranked-contexts) includes every context, baseline spread, pair counts and Pearson correlations. GM12878 has a positive continuous score response despite its weak binary diagnostic enrichment; the endpoints answer different questions.
 
-The failed lifts comprise **2 “Deleted in new”** and **2 “Partially deleted in new”** records. No interval was resized to make it pass. [Mismatch and failure details](results/tables/liftover_hg19_to_hg38.md)
+For sequence-response analysis, carry forward the strongest context within each cell: SK-N-SH/En02, HepG2/En02, K562/En02 and GM12878/En09. Also retain En19 separately in every cell for active-enhancer follow-up: En02 is the source study's background-control enhancer and has a near-zero baseline. [Recommendation and baseline evidence](results/tables/analysis_dataset.md#context-recommendation)
 
-Repeat-associated failure was checked against the original hg19 RepeatMasker track, using any overlapping repeat annotation and counting each element once.
+### Chain lifting alone contaminates ortholog classification
 
-| Original repeat overlap | Input elements | Failed lifts | Lift failure rate | Total excluded, including mismatches |
-| --- | ---: | ---: | ---: | ---: |
-| Inside repeats | 4,630 | 2 | 0.0432% | 25 |
-| Outside repeats | 8,236 | 2 | 0.0243% | 26 |
+The mouse pilot exposes distinct sources of contamination in chain-based present/absent calls:
 
-The absolute failure-rate difference is **+0.0189 percentage points**, below the report's descriptive **5-percentage-point** threshold for a large difference. This does not establish absence of evolutionary-class bias: repeat overlap is only a proxy, and sequence-mismatch exclusions also matter. [Repeat-bias analysis and population breakdown](results/tables/liftover_hg19_to_hg38.md)
+- The element can lift while its motif region does not: **8** pilot elements have element-only mappings. [Independent motif track](results/tables/pilot_mouse_orthologs.md)
+- A returned interval can bridge missing source bases or target insertions through the motif. The evidence audit records **112** disrupted-motif alignments. [Alignment evidence](results/tables/pilot_mouse_evidence.md)
+- The human canonical site may already be below the binding-score threshold: **289** pilot elements are human-weak. [Human starting-site scores](results/tables/pilot_mouse_evidence.md)
 
-### Pilot selection and reference verification
+The evidence-aware partition retains all **390** pilot elements:
 
-A single chromosome keeps the full path from coordinates to comparative evidence small enough to inspect before scaling. **chr8** was specified as the pilot chromosome and recorded in `PILOT_CHROM`; it was not selected after comparing mapping outcomes. Its **390 canonical-motif elements** meet the expected **300–400** range and the operational **150–600** guard. This is an engineering pilot, not a demonstrated representative sample of the genome. Contrast elements are excluded. [Pilot report](results/tables/pilot_setup.md)
+| Group | Elements | Interpretation and use |
+| --- | ---: | --- |
+| Retention candidates | 20 | Strong human and corresponding mouse cores with intact, eligible correspondence; prioritize candidate review. |
+| Nonretention candidates | 18 | Strong human core and an eligible corresponding mouse core below threshold; review as a sequence contrast. |
+| Unresolved | 63 | Human-strong cases with insufficient motif correspondence or scoring evidence, including disrupted or regional alignments; retain the uncertainty. |
+| Human-weak | 289 | Human canonical core below 20.86; retain for activity modeling but exclude from the strong-human retention contrast. |
 
-All pilot intervals are **200 bp**. A fixed random sample extracted from the written BED gives **10/10 exact oriented matches** to the verified hg38 CSV. The report lists the sampled IDs and coordinates. [Regression evidence](results/tables/pilot_setup.md)
+Source: [corrected pilot comparison](results/tables/pilot_mouse_evidence.md). There are no source-unscorable elements in this reported partition. A naive two-way call would mix missing alignment, gapped correspondence and weak starting motifs into a purported lineage-specific class, inflating evidence for human-specific silencing.
 
-| Required assembly | Sequences observed / UCSC | Bases observed / UCSC | Whole-file publisher MD5 | Result |
-| --- | ---: | ---: | --- | --- |
-| hg38 | 455 / 455 | 3,209,286,105 / 3,209,286,105 | Match | PASS |
-| mm39 | 61 / 61 | 2,728,222,451 / 2,728,222,451 | Match | PASS |
+Flank anchoring recovered **9** eligible regions from **157** unmapped elements and found **1** above-threshold motif in whole-region scans (**0** in midpoint scans), so it rescued little. [Flank-rescue report](results/tables/pilot_mouse_rescue.md)
 
-Counts include alternate and unplaced sequences, not only primary chromosomes. Exact digest values and per-reference evidence are in the [mouse genome gate](results/tables/pilot_mouse_lift.md). This table makes no verification claim about references unused by the mouse workflow.
+## Dataset and repression sign
 
-### Mouse minMatch sweep
+**Repression = median NegCtrl activity in the same cell and enhancer − element activity. Positive means stronger repression relative to that matched baseline.** A positive raw `log2FoldChange` can still represent repression. Negative repression means activity above the matched baseline; missing activity remains missing.
 
-**minMatch is the fraction of source bases successfully remapped, not nucleotide identity.** It cannot establish sequence conservation or preservation of the REST motif. [UCSC parameter explanation](https://groups.google.com/a/soe.ucsc.edu/g/genome/c/YbyOe7AEXj4)
+The [dataset report](results/tables/analysis_dataset.md#repression-sign-and-example) gives this measured example for `REST_chr10:100059172-100059372_Ref` in HepG2/En11:
 
-Only minMatch varied in the pilot sweep; `-multiple` remained disabled. The width band describes the unpadded target element. Exact band endpoints are included, so a width of **160 or 240 bp** is not counted as exceeding **20%** deviation from **200 bp**. [Sweep report](results/tables/pilot_mouse_lift.md)
+```text
+matched baseline: 0.65; raw activity: 0.34; repression: +0.30
+```
 
-| minMatch | Lifted / input | Lift rate | Median target width (bp) | Within 160–240 bp | Outside 160–240 bp |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 0.95 | 63 / 390 | 16.15% | 205 | 56 | 7 |
-| **0.5** | **227 / 390** | **58.21%** | **189** | **163** | **64** |
-| 0.2 | 247 / 390 | 63.33% | 185 | 165 | 82 |
-| 0.1 | 252 / 390 | 64.62% | 184 | 165 | 87 |
-
-**`MINMATCH_CROSS_SPECIES = 0.5` is the mouse-pilot policy.** Moving to 0.2 adds only **2** net in-band mappings while the out-of-band count increases from **64 to 82**. The mapped sets are not strictly nested: this transition gains **21 IDs** and loses **1** as duplicated. Moving to 0.1 adds **5** mappings, all out of band. The selected value captures most width-stable coverage without those additional distorted spans. Width is a diagnostic, not a proof of mapping precision; all successful mappings remain in the audit. This value has not been validated as optimal for other species. [Measured tradeoff and rationale](results/tables/pilot_mouse_lift.md)
-
-The final element lift retains **227/390 (58.21%)** and records **163** failures, whose verbatim categories are:
-
-| Unmapped reason | Elements |
-| --- | ---: |
-| Deleted in new | 130 |
-| Partially deleted in new | 33 |
-
-Both outputs and an audit row for every input are preserved. [Final mouse lift](results/tables/pilot_mouse_lift.md)
-
-### Motif-window coverage and the three-way call
-
-At `minMatch=0.5`, an element can pass even if its motif-bearing region does not map. Scanning such a target interval and treating “no hit” as motif loss would mix alignment gaps with biological absence. An independent lift of the **21 bp** motif window, at the same **0.5** threshold, tracks whether the relevant region is available for scoring. [Motif-window report](results/tables/pilot_mouse_orthologs.md)
-
-| Element track | Motif-window track | Call | Observed elements | Interpretation |
-| --- | --- | --- | ---: | --- |
-| Lifted | Lifted | MAPPED | 219 | Eligible for sequence extraction after chromosome, strand, and containment checks |
-| Lifted | Unmapped | UNDETERMINED | 8 | Element mapped without a mapped motif window; exclude mouse downstream |
-| Unmapped | Lifted | UNDETERMINED | 6 | Motif-only mapping; retain its coordinates, but exclude mouse downstream |
-| Unmapped | Unmapped | ABSENT | 157 | Candidate alignment loss; not proven biological loss |
-
-The totals are **219 MAPPED + 14 UNDETERMINED + 157 ABSENT = 390**, asserted in code. Motif-only outcomes deliberately remain UNDETERMINED. All **219/219** jointly lifted records pass chromosome/strand agreement and motif-within-element containment. A discordant joint lift is a hard failure, not a silently accepted ortholog. [Call accounting](results/tables/pilot_mouse_orthologs.md)
-
-A passing motif-window lift can still map only part of the window. **MAPPED establishes mapping availability; it does not establish an intact or functional motif.** The raw mouse window scans produce 30 above-threshold and 189 below-threshold results. The evidence layer also scores the exact corresponding site and excludes weak human sites or uncertain alignments from the direct contrast. [FIMO](results/tables/pilot_mouse_fimo.md) · [Evidence](results/tables/pilot_mouse_evidence.md)
-
-### Extracted mouse sequences
-
-Only MAPPED elements enter `orthologs.mm39.fa`. Extraction uses the lifted **element** interval, with **15 bp** padding on each side, BED strand, and `twoBitToFa -noMask`. Width flags describe the original unpadded interval. The sidecar keeps every pilot element, including unmapped reasons and partially available coordinates. [Extraction report and full length-frequency table](results/tables/pilot_mouse_orthologs.md)
-
-| Check | Observed |
-| --- | ---: |
-| FASTA records, equal to MAPPED count | 219 |
-| Sidecar rows, equal to pilot input | 390 |
-| MAPPED elements within 160–240 bp before padding | 159 |
-| MAPPED elements outside 160–240 bp before padding | 60 |
-| Extracted sequence lengths, minimum–maximum from the reported distribution | 136–3,285 bp |
-| Extracted sequences under 50 bp | 0 |
-| Sequences containing N | 0 |
-| Elements with padding clipped at a chromosome boundary | 0 |
-
-Long or short target spans are retained and flagged rather than removed to improve apparent coverage. They have been scored with the shared FIMO helper, but sequence matches do not demonstrate retained or lost REST binding.
-
-### Corrected evidence and preserved prior run
-
-Use `data/processed/pilot_mouse_evidence/calls.csv` as the current all-element comparison table. It keeps raw scan results, human strength, source/target coordinates, chain gaps and trimming, and separate comparison eligibility. Weak human sites remain available for repression modeling. A region below threshold is not automatically an evolutionary loss.
-
-The corrected rescue cohort has **157** elements. The selected 500 bp flanks yield **9** accepted regions: **1 REGION_MOTIF_PRESENT, 8 REGION_BELOW_THRESHOLD, 148 NO_SYNTENY** across the cohort. The sole positive disappears in the 101 bp midpoint scan. Both accepted regional states remain unresolved at the motif-correspondence level; the earlier RESCUED/ABSENT_CONFIRMED labels are retired. [Rescue report](results/tables/pilot_mouse_rescue.md)
-
-The prior code and output files are preserved with a SHA-256 manifest in `results/archive/pilot_before_motif_coordinate_fix_20261111_45402c8/`. The all-element old/new comparison is `data/processed/pilot_mouse_evidence/comparison_to_previous.csv`.
-
-### Completion boundary
-
-| Component | Completed work | Remaining work |
-| --- | --- | --- |
-| Inputs and assemblies | GEO inspection; verified human conversion; continuous activity dataset with separate enhancer contexts, matched baselines and explicit missingness | Join phyloP features; define scales for eventual gate metrics; binary silencer labels remain unverified and unused |
-| Mouse pilot | Corrected motif coordinates, reference checks, dual-track lift, human/mouse FIMO, flank sweep, chain-block evidence and all-element comparison table | Review uncertain alignments and test functional interpretations |
-| Comparative features | Generic lift and chain-evidence helpers; validated motif inputs/score scale; conservation helper | Select conservation tracks, acquire/validate cofactor accessions, run remaining species |
-| Evolutionary classification | Explicit conservative mouse evidence adapter and eligibility mask | Extend to other species and establish ancestral states; candidates are not demonstrated evolutionary losses |
-| Predictive evaluation | Chromosome/sequence-cluster fold builder and evaluator for supplied predictions | Produce real fold assignments, implement training, fit held-out models, and estimate performance |
-| Candidate prioritization | Research design and explicit metric interfaces | Define and implement gate-quality metrics, rank candidates, and test experimentally |
-
-Model-training functions in [`src/models.py`](src/models.py) and gate-quality functions in [`src/metrics.py`](src/metrics.py) intentionally raise `NotImplementedError`. `make pilot-validate` rebuilds sequence evidence; `make dataset` builds and validates continuous observations through [`src/dataset.py`](src/dataset.py). A configuration constant or tested helper is not a completed biological analysis.
-
-## Next steps and study priorities
-
-**Continuous analysis authorized by explicit user override.** The [validation report](results/tables/scoring_validation.md) confirms activity identity with GEO, activity direction in all four cells, and exact agreement with all 7,005 available published canonical-site scores. The unreproduced Figure 2B binary labels remain a limitation; this project does not consume them. The override and reason are retained in `data/processed/scoring_validation/gate.json`, with the original failed finding preserved.
-
-`make dataset` now builds **267,440 source observations** at element × cell type × enhancer resolution in `data/processed/analysis_dataset.csv`. Repression is the **same-cell, same-enhancer NegCtrl median minus raw activity**, so positive means greater repression. Enhancers stay separate, and missing activity stays missing. The [analysis dataset report](results/tables/analysis_dataset.md) ranks all 20 contexts by measured score–repression correlation and records baseline spread, source accounting and recommendations. Verified hg38 coordinates support a later phyloP join; conservation extraction is not part of this target.
-
-**Start with the 20 retention candidates, then study the 18 nonretention candidates and resolve the 63 uncertain cases, before expanding to the 289 weak human sites.** These four groups account for all 390 pilot elements. Their definitions come from the [current evidence report](results/tables/pilot_mouse_evidence.md) and [`comparison`](src/pilot_evidence.py); the work below is planned, not completed.
-
-Here, a **strong human site** means the exact 21 bp canonical core scores **≥20.86** with MA0138.2. A nearby hit cannot substitute for that core. **Intact correspondence** requires a unique matching chain shared by the element and motif, all 21 human motif bases aligned, and no inserted mouse bases between them. This establishes a sequence comparison, not REST binding or repression.
-
-| Priority and group | Why these elements belong here | Next work |
-| --- | --- | --- |
-| **1. 20 retention candidates** (`RETAINED_CANDIDATE`) | Both the human core and corresponding mouse core score ≥20.86, with intact correspondence. | Join the continuous dataset to paired sequences, scores and alignment evidence for the first candidate review table. Keep each cell/enhancer separate and prioritize measured context-matched repression for follow-up. |
-| **2. 18 nonretention candidates** (`NONRETENTION_CANDIDATE`) | The human core scores ≥20.86 and correspondence is intact, but both the mouse core and its surrounding scan window score below threshold. | Compare their human reporter activity with the retention group while accounting for human motif score and assay context. Inspect sequence differences and additional species before proposing an evolutionary history; a human-positive/mouse-negative pair alone cannot establish loss. |
-| **3. 63 unresolved elements** (`UNRESOLVED`) | The human core is strong, but the available alignment or scoring evidence does not support a direct motif comparison. Current reasons include disrupted alignments, missing correspondence, single-track mappings, and regional anchors only. | Review chain blocks, gaps, trimming, and flanking context; seek additional alignment evidence where needed. Keep each uncertainty explicit until resolved. The **one motif-positive rescue region** stays here because its hit has not been shown to correspond to the human motif. |
-| **4. 289 weak human sites** (`HUMAN_WEAK`) | The exact human core scores <20.86. This check takes precedence over mouse mapping status; these sites are not necessarily unmapped or biologically inactive. | Retain them for secondary repression analyses, including nearby motifs and activity despite a weak canonical core. Keep them outside the strong-human retention/nonretention contrast: without a strong starting motif, a negative mouse scan does not establish loss of that motif. |
-
-For the first group, the immediate deliverable is an evidence-backed shortlist, with missing activity kept explicit. Proposed functional follow-up would compare human and mouse sequences and motif-disrupted controls under defined REST conditions. Any claim of a transcriptional NOT gate will require measured input-dependent repression, leakiness, and dynamic range; motif retention alone does not establish those properties.
-
-Use `comparison_status`, `eligible_for_direct_comparison`, and `comparison_reason` in [`calls.csv`](data/processed/pilot_mouse_evidence/calls.csv) to select groups. Preserve all rows and raw evidence; neither raw mapping `ABSENT` nor a below-threshold regional scan is a biological-loss label. Additional-species analysis and broader model evaluation should retain these distinctions.
+Repression is calculated before rounding; displayed measurements use two decimals, with full precision in the linked reports. The dataset keeps supplied activity and padj, population, verified hg38 coordinates where available, canonical-core FIMO score, the threshold indicator and explicit missingness flags. It asserts source row count and exact element/cell/enhancer key preservation; no context is synthesized and no activity is imputed. Controls and unverified native intervals remain present with missing working coordinates. Scores for noMotif and NegCtrl are missing because a canonical site is not defined, not because they were scored below threshold. [Source accounting and missingness](results/tables/analysis_dataset.md)
 
 ## Design decisions and why
 
-| Decision | Reason | Boundary |
-| --- | --- | --- |
-| Convert once to hg38 | Establish a common coordinate system for conservation, ENCODE features, and species chains; keep source coordinates for audit | Downstream code reads verified hg38 columns, never coordinate text embedded in IDs |
-| Use liftOver chains rather than parse MAF blocks | The immediate task is interval projection with explicit failure accounting. Existing chains support a small, inspectable workflow without building a multi-alignment parser | A lifted span is not a base-by-base multi-species alignment or proof of unique biological orthology |
-| Keep reference genomes as `.2bit` | `twoBitToFa` extracts requested intervals directly; whole-genome FASTA expansion is unnecessary | Both file integrity and extracted sequences still require validation |
-| Read conservation bigWigs remotely | The implemented helper requests genomic windows through pyBigWig and checks HTTP byte-range support; avoids whole-track downloads | Production track URLs remain unset; missing coverage is reported, not imputed as zero |
-| Lift element and motif window separately | Whole-element coverage can conceal failure to align the motif region | Partial-window alignment remains possible; UNDETERMINED is excluded for that species |
-| Keep width distortions and unmapped records | Attrition and alignment uncertainty must remain visible rather than disappear through filtering | Width stability is only a diagnostic; no motif-retention claim follows from it |
-| Gate references by dependency | A step needs valid references it actually reads | Every required reference still faces the full integrity gate |
-| Group folds by chromosome and sequence similarity | Prevent local genomic context and clustered related sequences from appearing on both sides of evaluation | Chromosome/cluster connected components are kept intact; too few components cause failure rather than forced splitting |
+| Decision | Reason and evidence |
+| --- | --- |
+| Resolve hg19, then lift to hg38 with sequence verification | Published coordinates match hg19; complete library oligos are checked against the lifted hg38 reference. Only exact verified intervals enter genomic joins. Original IDs and source coordinates remain traceable; never parse working coordinates from IDs. [Assembly](results/tables/coordinate_assembly.md), [conversion](results/tables/liftover_hg19_to_hg38.md) |
+| Lift the motif window independently of the full element | Element mapping can succeed without the motif. Separate tracks expose that failure and retain uncertain cases. [Motif-window report](results/tables/pilot_mouse_orthologs.md) |
+| Inspect chain blocks and use flanks for regional anchoring | Bounding intervals conceal internal gaps. Flanks locate candidate syntenic regions; chain blocks resolve base-level motif correspondence. [Evidence audit](results/tables/pilot_mouse_evidence.md), [rescue](results/tables/pilot_mouse_rescue.md) |
+| Keep element × cell × enhancer observations and matched controls | Baselines and motif effects differ across contexts. A universal zero or an enhancer average would change the scientific question. [Dataset](results/tables/analysis_dataset.md) |
+| Use continuous conservation as the modeling feature | Continuous phyloP values can test added predictive information without turning alignment uncertainty into an evolutionary-age label. Track selection and extraction are unrun; the frozen classification track remains a documented result, not the target variable. [Dataset boundary](results/tables/analysis_dataset.md#coordinates-motif-scoring-and-missingness) |
 
-The fold implementation links chromosomes joined by a CD-HIT-EST cluster transitively, then assigns whole components deterministically. It checks that neither a chromosome nor a cluster crosses folds. Greedy clustering cannot guarantee detection of every related sequence, and this single-chromosome pilot is not the dataset for the planned chromosome-held-out model comparison. No real-data folds or model results have been produced. [Fold implementation](src/folds.py) · [Conservation reader](src/conservation.py)
+Coordinates use zero-based, half-open BED intervals. The motif offset uses inclusive endpoints and is oriented with the library sequence; it must be converted explicitly when writing BED. LiftOver `minMatch` measures source mapping coverage, not sequence identity or REST binding. [Coordinate and mapping contract](results/tables/pilot_mouse_orthologs.md)
 
-## Verification
+## Pipeline and implementation status
 
-### Integrity and accounting checks
+Paths are relative to the repository root. **Complete** means implemented and run for the stated scope. **Helper only** means tested mechanics exist but no production analysis is claimed. The mouse branch is complete and frozen.
 
-The implemented checks below are distinct from the unfinished activity-validation work. Failures remain visible; thresholds and interval lengths are not changed to obtain a pass.
+| Stage, in execution order | Status | Module / entry point | Make target | Principal output | Report |
+| --- | --- | --- | --- | --- | --- |
+| Source discovery and schema inspection | Complete; inventory retained | Recorded inspection; source readers in `src/assembly_check.py` | None | Cached GEO tables and schema inventory | [Discovery inventory; state superseded](results/tables/week1_discovery.md) |
+| Resolve source assembly | Complete | `src/assembly_check.py` | `assembly-check` | `results/tables/coordinate_assembly_comparisons.csv` | [Assembly](results/tables/coordinate_assembly.md) |
+| hg19 → hg38 and sequence verification | Complete | `src/lift.py` | `lift` | `data/processed/elements_hg38.csv` | [Human conversion](results/tables/liftover_hg19_to_hg38.md) |
+| Select canonical chr8 pilot and verify references | Complete; frozen pilot scope | `src/pilot.py` | `pilot` | `data/processed/pilot_chr8.bed` | [Pilot setup](results/tables/pilot_setup.md) |
+| Element lift to mm39 and mapping sweep | Complete; frozen | `src/pilot_mouse.py` | `pilot-mouse` | `data/processed/pilot_mouse/final/lifted.mm39.bed` | [Mouse lift](results/tables/pilot_mouse_lift.md) |
+| Independent motif-window lift and three-way mapping calls | Complete; frozen | `src/pilot_orthologs.py` | `pilot-orthologs` | `data/processed/pilot_mouse/orthologs.mm39.csv` | [Motif coverage](results/tables/pilot_mouse_orthologs.md) |
+| Oriented mouse sequence extraction | Complete; frozen | `src/pilot_orthologs.py` | `pilot-orthologs` | `data/processed/pilot_mouse/orthologs.mm39.fa` | [Extraction](results/tables/pilot_mouse_orthologs.md) |
+| Mouse FIMO and raw threshold calls | Complete; frozen | `src/pilot_fimo.py`, `src/motifs.py` | `pilot-fimo` | `data/processed/pilot_mouse/fimo_scores.csv` | [Raw FIMO](results/tables/pilot_mouse_fimo.md) |
+| Flank-anchored regional rescue | Complete; frozen pilot result | `src/rescue.py` | `pilot-rescue` | `data/processed/pilot_mouse_rescue/rescue.resolved.csv` | [Regional evidence](results/tables/pilot_mouse_rescue.md) |
+| Human strength, chain correspondence and comparison eligibility | Complete; frozen | `src/pilot_evidence.py`, `src/alignment_evidence.py`, `src/classify.py` | `pilot-validate` | `data/processed/pilot_mouse_evidence/calls.csv` | [Final pilot comparison](results/tables/pilot_mouse_evidence.md) |
+| Full canonical scoring and activity/sign audit | Complete; continuous override recorded | `src/scoring_validation.py` | `scoring-validation` | `data/processed/scoring_validation/canonical_scores.csv`, `gate.json` | [Validation and limitation](results/tables/scoring_validation.md) |
+| Context-matched continuous dataset | Complete | `src/dataset.py` | `dataset` | `data/processed/analysis_dataset.csv`, `analysis_dataset_contexts.csv` | [Dataset and context ranking](results/tables/analysis_dataset.md) |
+| Remote conservation features and dataset join | Helper only; production extraction not started | `src/conservation.py`; track URLs unset | None | No production feature table | No production report |
+| Additional species: rheMac10, canFam6, bosTau9, monDom5 | Analysis not started; shared lift/rescue helpers exist | `src/orthologs.py`, `src/rescue.py`; mouse orchestration is not generalized | None | No validated comparative table | No report |
+| Cofactor ChIP-seq features | Not started | No production module or selected feature set | None | None | No report |
+| Chromosome/CD-HIT grouped folds | Helper only; production folds not constructed | `src/folds.py` | None | `results/folds/assignments.csv` is a configured destination, not a completed result | No production report |
+| Motif-only, motif+conservation, motif+cofactor, gapped-k-mer models | Training not started; explicit stubs | `src/models.py` | None | No fitted models or held-out predictions | No report |
+| Gate dynamic range, leakiness and separation | Not started; explicit stubs | `src/metrics.py` | None | No gate metrics | No report |
+| Variant robustness | Not started; explicit stub | `src/metrics.py::variant_robustness` | None | No robustness analysis | No report |
 
-| Layer | Checks performed | Evidence or implementation |
-| --- | --- | --- |
-| Downloads and caches | Explicit HTTPS downloads; size limits or expected transfer size; resumable reference transfers; cache URL/digest agreement; provenance appended with source URL, UTC time, size, and local MD5 | [`downloads.py`](src/downloads.py), [`fetch_lift_inputs.py`](src/fetch_lift_inputs.py), [ledger](data/README.md) |
-| File format and source identity | Validate actual archive contents rather than trust extensions; restrict oligos to the intended library; unique native IDs; consistent coordinates across cell tables; exact-name or explicit-alias joins only | [Assembly report](results/tables/coordinate_assembly.md), [human conversion](results/tables/liftover_hg19_to_hg38.md) |
-| Required genomes | Require nonzero, stable files; successful `twoBitInfo`; exact per-contig equality to UCSC `.chrom.sizes`; sequence counts and total bases; whole-file MD5 equal to publisher manifest; detect file changes during verification | [Genome gate](results/tables/pilot_mouse_lift.md), [`pilot.py`](src/pilot.py) |
-| Source coordinates | Check declared source/working build, integer coordinates, valid strand, unique BED-safe IDs, and expected widths; use the original published inputs for human conversion and the verified CSV for pilot selection | [`lift.py`](src/lift.py), [`pilot.py`](src/pilot.py) |
-| Human lift | Mapped and unmapped IDs partition the source; retain unchanged failed records and their reasons; enforce the same-species success guard; exact sequence verification in either orientation; no ambiguous-base passes | [Conversion report](results/tables/liftover_hg19_to_hg38.md) |
-| Human publication | Verified, mismatched, and failed buckets sum to input overall and by population; only verified IDs exported; source coordinates and exclusions retained; repeat-overlap denominators include failures | [Conversion accounting and bias check](results/tables/liftover_hg19_to_hg38.md) |
-| Pilot | Canonical-only selection, count guard, exact widths, valid hg38 sequences; extract the seeded sample from the written BED and require oriented sequence equality | [Pilot regression](results/tables/pilot_setup.md) |
-| Mouse sweep | Pilot BED agrees with verified CSV; target intervals lie within the reference; every threshold accounts for every ID; final mapping and failure records equal the selected sweep entry | [Mouse lift](results/tables/pilot_mouse_lift.md) |
-| Dual-track join | Motif windows have expected widths and IDs; each track partitions input; replayed element lift equals stored final output; jointly mapped intervals agree in chromosome/strand and containment | [Motif-window report](results/tables/pilot_mouse_orthologs.md) |
-| Calls and extraction | Calls exhaustively partition input; sidecar has unique complete IDs; FASTA IDs equal exactly MAPPED IDs; valid uppercase DNA; lengths equal padded coordinate spans; boundary clipping recorded; short sequences and Ns counted | [Extraction report](results/tables/pilot_mouse_orthologs.md) |
-| Software contracts | Unit tests cover malformed inputs, external-wrapper outputs, missingness, classification, fold separation, and evaluator behavior; integration tests exercise installed external tools on synthetic fixtures | [`tests/`](tests/), `make test`, `make lint` |
+`pilot-validate` rebuilds pilot selection, element lifting, motif lifting and extraction, then runs mouse scoring, rescue and evidence publication in order. Human conversion is an explicit prerequisite, not silently rerun. The continuous dataset consumes validated scores and activities independently of mouse mapping eligibility. `classify.py` supplies conservative state mechanics.
 
-A local MD5 records file identity; it is not automatically publisher verification. Genome gates compare with UCSC manifests. Chain and RepeatMasker hashes are local identity records where publisher checksums were not established. A plausible `.2bit` index or base total alone is insufficient, hence the whole-file checksum check.
+The legacy `src/mpra_schema.py` helper assumes complete element/cell pairs, and the generic model evaluator requires binary labels and lacks enhancer keys. Neither is used by `dataset.py`. Production modeling must preserve context and missingness and adapt evaluation to the continuous outcome.
 
-The standalone genome-download shell script writes its ledger block after its transfer loop. An interrupted invocation may therefore leave downloads without completed ledger entries; its presence on disk does not substitute for the required-reference gate. The Python download helpers append provenance within each successful transfer. [Download script](scripts/fetch_genomes.sh) · [Download functions](src/fetch_lift_inputs.py)
+## Open analyses and candidate priorities
 
-### Recorded repeatability
+Prioritize retention candidates for sequence-and-activity review, nonretention candidates for matched contrasts, and unresolved cases for correspondence review. Human-weak sites remain part of repression modeling and a useful score contrast. These priorities follow the [pilot evidence categories](results/tables/pilot_mouse_evidence.md).
 
-Separate paired-run checks compared generated artifacts using SHA-256. These manifests record actual comparisons; they are not automatically regenerated by the Make targets.
+The central modeling work is to select and validate conservation tracks, join measured features to the continuous dataset, construct leakage-safe folds, and compare the stated model families within separate enhancer contexts. Additional species and cofactor features remain open. Gate metrics require defined ON/OFF conditions and measurement scales; variant robustness requires validated variant-to-element mapping.
 
-| Repeated command | Artifacts compared | Recorded result | Manifest |
-| --- | ---: | --- | --- |
-| `make lift` | 10 | Byte-identical | [Human conversion](results/tables/liftover_hg19_to_hg38_reproducibility.json) |
-| `make pilot-mouse` | 33 | Byte-identical; printed output identical | [Mouse lift](results/tables/pilot_mouse_reproducibility.json) |
-| `make pilot-validate` | 112 | See the measured full-pipeline replay receipt | [Corrected pilot](results/tables/pilot_validation_reproducibility.json) |
+## Reproducing and checking the work
 
-Stable ordering, a fixed pilot sample, and timestamp-free conversion/pilot reports support replay with identical inputs and tools. This does not claim identical bytes across software versions or filesystem layouts. The standalone assembly-evidence report includes its generation timestamp; the byte-identical claims above concern the listed workflows. Input hashes and executed commands are retained in the reports and logs.
-
-## Reproducing
-
-### Environment
-
-Run commands from the repository root:
+Create the declared environment and run software checks from the repository root:
 
 ```bash
 conda env create -f environment.yml
@@ -297,173 +151,49 @@ make test
 make lint
 ```
 
-`make env` is equivalent to the environment-creation command. [environment.yml](environment.yml) declares Python dependencies and genomics packages. The completed workflow needs `liftOver`, `twoBitInfo`, `twoBitToFa`, and FIMO; explicit acquisition uses system `curl`. bedtools and CD-HIT support other helpers and integration tests. Missing executables can cause integration tests to skip, so inspect the test summary rather than interpreting a skip as successful tool verification.
-
-Use `make TARGET PYTHON=/path/to/python` when selecting an interpreter explicitly. Do not run Python with assertions disabled: accounting assertions are part of the validation contract.
-
-### Required local inputs
-
-| Input | Expected location | Purpose |
-| --- | --- | --- |
-| GEO archive | `data/raw/geo/GSE196171/GSE196171_RAW.tar` | Native intervals and construct measurements |
-| Publisher Table S2 | `data/raw/assembly_check/Table_S2_publisher.zip` | Published oligo sequences and explicit aliases |
-| Cached reference queries | `data/raw/assembly_check/ucsc/` | Offline source-assembly evidence |
-| Human assembly chain | `data/raw/hg19ToHg38.over.chain.gz` | Original-to-working-build conversion |
-| RepeatMasker annotation | `data/raw/repeats/hg19.rmsk.txt.gz` | Conversion attrition audit |
-| Required genomes | `data/raw/genomes/hg38.2bit`, `data/raw/genomes/mm39.2bit` | Human verification and mouse extraction |
-| UCSC reference metadata | `data/raw/genomes/verification/` | Per-assembly `.chrom.sizes` and `md5sum.txt` caches |
-| Mouse chain | `data/raw/chains/hg38ToMm39.over.chain.gz` | Element and motif-window projections |
-| REST motif matrix | `data/raw/MA0138.2.meme` | Shared human/mouse FIMO scoring and published-score regression |
-| Provenance ledger | `data/README.md` | Source URLs and cache identity |
-
-A fresh checkout contains code and documentation, not the downloaded references or generated reports. Use the [data catalog](data/README.md) for exact source URLs and recorded identities. The failed `mmc3.zip` response retained in the assembly-check directory is an HTML challenge, not the usable supplement; use `Table_S2_publisher.zip`. [Fetch failure and recovery evidence](results/tables/coordinate_assembly.md)
-
-Acquisition commands are **explicit network operations**, separate from offline reproduction:
-
-```bash
-# Requires the GEO archive already at its documented path.
-# Fetches the publisher oligo table and small reference-query evidence.
-python -m src.assembly_check --fetch
-
-# Fetches the human chain and repeat annotation, without a whole genome.
-python -m src.fetch_lift_inputs
-
-# Optional explicit acquisition of hg38 as well.
-python -m src.fetch_lift_inputs --genome
-```
-
-To acquire the GEO archive or mouse chain through the existing resumable helper, run the following only when those inputs are needed. It checks an existing final file against provenance rather than silently replacing it:
-
-```python
-from src import config
-from src.assembly_check import GEO_ARCHIVE
-from src.fetch_lift_inputs import fetch, remote_size
-
-sources = [
-    (
-        "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE196nnn/GSE196171/suppl/GSE196171_RAW.tar",
-        GEO_ARCHIVE,
-    ),
-    (
-        "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToMm39.over.chain.gz",
-        config.CHAIN_PATHS["mm39"],
-    ),
-]
-for url, path in sources:
-    size = remote_size(url)
-    print(path.name, size, "bytes")
-    fetch(url, path, size)
-```
-
-Acquire the verification metadata explicitly for the required pair:
-
-```python
-from src.pilot import fetch_metadata
-
-errors = fetch_metadata(("hg38", "mm39"))
-if errors:
-    raise RuntimeError("; ".join(errors))
-```
-
-This metadata helper can also acquire the platform-appropriate UCSC `twoBitInfo` utility if absent. It does not download genomes. The narrower `python -m src.pilot --fetch-metadata` fetches hg38 metadata and then runs the pilot.
-
-Target-genome acquisition is handled manually by [`scripts/fetch_genomes.sh`](scripts/fetch_genomes.sh), which supports `--check-only`, prompts before downloads, and resumes transfers. It covers the target species rather than hg38. Do not launch a competing transfer while that script owns a download. There is no `make data-genomes` target; no analysis target repairs or downloads references.
-
-### Offline replay
-
-With inputs and executables available:
+With cached inputs and executables available, the analysis commands are:
 
 ```bash
 make assembly-check
 make lift
 make pilot-validate
+make scoring-validation
+make dataset
 ```
 
-For intermediate inspection, `make pilot`, `make pilot-mouse`, `make pilot-orthologs`, `make pilot-fimo`, and `make pilot-rescue` are independently available. The last command above rebuilds all of them in dependency order and publishes the human/target evidence table last. Reports print expected/observed values or explicit errors. Do not bypass a failed gate or substitute an unverified file to obtain an output.
+Use `make TARGET PYTHON=/path/to/python` to select an interpreter. Reference acquisition is explicit and separate: `src/fetch_lift_inputs.py` fetches human conversion inputs, `src/fetch_mouse_scoring_inputs.py` fetches mouse scoring inputs, and `scripts/fetch_genomes.sh` manages manual genome downloads. See the [data catalog](data/README.md) for source locations and provenance. The scoring audit also requires its cached author result tables and score evidence; the analysis targets do not fetch missing inputs.
 
-Re-running with identical inputs and tools should reproduce the conversion and pilot artifacts. Compare their hashes and reports as in the [recorded repeatability checks](#recorded-repeatability); the standalone assembly report's timestamp is expected to change. `make test` checks software behavior; real-data assertions in the data targets are separate evidence.
+Software tests cover coordinate contracts, wrappers, mapping uncertainty, score handling, context-specific baselines, missingness, source-key preservation and fold mechanics. External-tool integration tests use synthetic fixtures and can skip when executables are unavailable; a skip is not successful tool verification. Tests of stubs establish explicit failure behavior, not completed models.
 
-### Data and output handling
+The [dataset replay receipt](results/tables/analysis_dataset_reproducibility.json) records byte-identical outputs from paired full builds. The [report index](results/README.md) also links the conversion and pilot replay receipts and describes their scope. These are recorded comparisons with their own inputs and implementations, not guarantees across software versions. Source hashes in manifests can change after documentation or module organization edits; recorded biological outputs must not be presented as a fresh pipeline run.
 
-Downloaded and generated data remain local and must not be committed. The active [`.gitignore`](.gitignore) excludes data artifacts and most generated results, with documentation/placeholders and fold-output exceptions. Local evidence links can consequently be absent in a fresh checkout. Existing reports document observed runs; regenerating them requires the corresponding inputs.
+## Repository organization
 
-Before committing source or documentation changes, inspect:
-
-```bash
-git status --short
-git diff --cached --name-only -- data/
-```
-
-Do not stage downloaded/generated data or change historical ledger rows. Download provenance and generated-output identity are separate records: the ledger records acquisition; reports, audits, and repeatability manifests identify derived artifacts.
-
-## Repository layout
-
-| Location | Contents and role |
+| Location | Responsibility |
 | --- | --- |
-| [`README.md`](README.md) | Technical record, measured results, reproduction instructions, and interpretation boundaries |
-| [`README (2).md`](README%20%282%29.md) | Research rationale and proposed study design; use this README for implementation status |
-| [`data-README.md`](data-README.md) | Acquisition and data-preparation companion |
-| [`data/README.md`](data/README.md) | Local data catalog and append-only download provenance |
-| [`src/config.py`](src/config.py) | Assembly identities, paths, pilot chromosome, motif convention, and chosen mouse minMatch; some future-analysis settings remain unset |
-| [`src/assembly_check.py`](src/assembly_check.py), [`src/lift.py`](src/lift.py) | Source-assembly evidence, generic liftOver interface, verified human conversion, and repeat-bias audit |
-| [`src/pilot.py`](src/pilot.py), [`src/pilot_mouse.py`](src/pilot_mouse.py), [`src/pilot_orthologs.py`](src/pilot_orthologs.py) | Dependency-scoped genome gates, canonical pilot, mouse sweep, motif-window calls, and sequence extraction |
-| [`src/downloads.py`](src/downloads.py), [`src/fetch_lift_inputs.py`](src/fetch_lift_inputs.py), [`scripts/`](scripts/) | Explicit acquisition and provenance; manual target-genome download script |
-| [`src/_utils.py`](src/_utils.py), [`src/io_mpra.py`](src/io_mpra.py) | Table, coordinate, FASTA, and input-validation helpers; explicit activity-column mappings remain unset |
-| [`src/motifs.py`](src/motifs.py), [`src/conservation.py`](src/conservation.py), [`src/orthologs.py`](src/orthologs.py), [`src/classify.py`](src/classify.py) | Scoring, remote-track, orthology, and classification helpers; production comparative features are unfinished |
-| [`src/folds.py`](src/folds.py), [`src/models.py`](src/models.py), [`src/metrics.py`](src/metrics.py) | Fold grouping and evaluator; explicit training and gate-metric stubs |
-| [`tests/`](tests/) | Unit tests and external-tool integration fixtures |
-| [`notebooks/`](notebooks/) | Unexecuted exploration scaffold; not a source of completed scientific results |
-| `data/raw/` | Source archives, sequence-query caches, reference genomes, chains, annotations, and verification metadata |
-| `data/processed/` | Verified human CSV, pilot BED, lift outputs, per-element audits, and extracted mouse sequences |
-| `results/tables/` | Measured reports, assembly comparison rows, and repeatability manifests |
-| `results/figures/`, `results/folds/` | Destinations for future figures and real-data fold assignments |
-| [`Makefile`](Makefile), [`environment.yml`](environment.yml) | Supported commands and dependency specification |
+| `src/` | Importable analysis, validation, acquisition helpers and pipeline entry points; explicit stubs are documented as such. |
+| `scripts/` | Operational shell commands and standalone rendering of saved results; scientific validation belongs in `src/`. |
+| `tests/` | Unit contracts and external-tool integration fixtures. |
+| `references/` | Published sequence/score fixtures and provenance. |
+| `data/raw/`, `data/processed/` | Local source data, verified sequences and derived observation/evidence tables; do not commit artifacts. |
+| `results/tables/` | Reported measurements, limitations and reproducibility receipts. |
+| `results/figures/` | Saved mapping/FIMO flow and scoring-validation figures; the flow shows raw mapping/scan states, not the final comparison groups. |
+| `results/README.md` | Current versus superseded report index and organization decisions. |
 
-## Data sources
+Generated data and most results are ignored by Git. The root README is self-contained for the measured findings; linked local artifacts require the documented caches or reproduction commands in a fresh checkout. The research-design companion is background, not the authority for implementation status.
 
-| Source | Role | Status and local evidence |
-| --- | --- | --- |
-| [GEO GSE196171](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE196171) and [supplementary directory](https://ftp.ncbi.nlm.nih.gov/geo/series/GSE196nnn/GSE196171/suppl/) | MPRAduo activity tables and native interval metadata | Inspected; assembly-resolved coordinate inputs used in human conversion; activity preparation unfinished |
-| [Publisher Table S2 archive](https://ars.els-cdn.com/content/image/1-s2.0-S2666979X22001926-mmc3.zip) | Library oligo sequences | Used in [assembly discrimination](results/tables/coordinate_assembly.md) and [full human verification](results/tables/liftover_hg19_to_hg38.md) |
-| [UCSC sequence API](https://genome.ucsc.edu/goldenPath/help/api.html) | Small reference queries at published coordinates | Cached observations and query hashes in [comparison CSV](results/tables/coordinate_assembly_comparisons.csv) |
-| [UCSC hg38 reference](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/) and [mm39 reference](https://hgdownload.soe.ucsc.edu/goldenPath/mm39/bigZips/) | `.2bit` DNA, chromosome sizes, publisher checksums | Required references pass the [mouse gate](results/tables/pilot_mouse_lift.md) |
-| [UCSC hg19 chains](https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/) and [hg38 chains](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/) | Human assembly conversion and comparative interval projection | hg19→hg38 and hg38→mm39 used; exact input digests in their reports |
-| [UCSC hg19 RepeatMasker](https://hgdownload.soe.ucsc.edu/goldenPath/hg19/database/rmsk.txt.gz) | Repeat-overlap diagnostic for human conversion | Used in [attrition comparison](results/tables/liftover_hg19_to_hg38.md) |
-| [JASPAR](https://jaspar.elixir.no/) | REST motif matrix MA0138.2 | Used for human/mouse scoring; coordinates and score scale checked against [published reference fixtures](references/README.md) |
-| [ENCODE](https://www.encodeproject.org/) and publication supplements | Intended cofactor/accessibility evidence and accession reconciliation | No validated production feature set reported |
-| UCSC phyloP/phastCons tracks | Intended conservation features | Remote-reading helper exists; specific track URLs remain unset |
-| [Author duoREST repository](https://github.com/tewhey-lab/duoREST) | Reference implementation for understanding the published analysis | External reference, not an executed dependency of this workflow |
+## Limitations
 
-## References
+- **Published binary labels remain unreproduced and unused.** Exact motif scores and identical GEO activities support continuous analysis; they do not repair the missing matched-enhancer Figure 2B labels. Supplied padj is not interpreted as that silencer FDR.
+- **MPRA is episomal.** Reporter effects do not establish behavior in chromosomal integration, endogenous chromatin or coupled circuits.
+- **These are cell lines, not mature neurons.** SK-N-SH does not establish behavior in neurons, organoids or neural computing systems.
+- **The output is candidate evidence, not demonstrated gates.** Switching behavior, dynamic range, leakiness and robustness are unmeasured here.
+- **Alignment uncertainty is not biological absence.** A disrupted motif or failed chain projection needs its own interpretation; the ancestral state is not identified by the mouse comparison.
+- **Generalization is untested.** The mouse classification pilot does not establish other-species performance, and descriptive context rankings are not held-out model validation.
+- **Conservation is observational.** Added predictive value, if demonstrated, would not establish that evolutionary retention causes repression.
 
-- **Mouri et al.** *Whole-genome functional characterization of RE1 silencers using a modified massively parallel reporter assay.* Primary assay and sequence source. [Article and supplements](https://pmc.ncbi.nlm.nih.gov/articles/PMC9903721/) · [DOI](https://doi.org/10.1016/j.xgen.2022.100234)
-- **UCSC Genome Browser.** Reference assemblies, chains, sequence API, and liftOver parameter semantics. [Downloads](https://hgdownload.soe.ucsc.edu/downloads.html) · [API](https://genome.ucsc.edu/goldenPath/help/api.html) · [minMatch explanation](https://groups.google.com/a/soe.ucsc.edu/g/genome/c/YbyOe7AEXj4)
-- **MEME Suite FIMO.** Motif-scanning software used for the completed human/mouse pilot scoring. [Documentation](https://meme-suite.org/meme/doc/fimo.html)
-- **pyBigWig.** Indexed remote conservation-track access. [Project documentation](https://github.com/deeptools/pyBigWig)
-- **CD-HIT.** Sequence-clustering software used by the fold-construction helper. [Project documentation](https://github.com/weizhongli/cdhit)
+## Sources and attribution
 
-Project measurements in this README are linked to files in `results/tables/`. The conversion-attrition percentage is explicitly calculated from those reported counts; it is not an additional measurement. Identifiers such as assembly names and accessions identify inputs, not experimental results.
+The assay and library sequences come from Mouri et al., *Whole-genome functional characterization of RE1 silencers using a modified massively parallel reporter assay*, with processed activities from GEO and supplementary author tables. UCSC supplies references and chains; JASPAR supplies the REST motif used by FIMO. Local reports document the actual inputs, validations and limitations.
 
-## Scope and known limitations
-
-| Limitation | Consequence for interpretation |
-| --- | --- |
-| Episomal reporter versus integrated circuit | Reporter repression does not establish behavior after genomic integration, chromatin remodeling, or coupling to other circuit components |
-| Cell lines versus neurons | The assayed cell lines do not demonstrate performance in mature neurons, organoids, or neural computing systems |
-| Candidate list versus demonstrated gate | A computational ranking would nominate sequences for testing; switching behavior, dynamic range, leakiness, and circuit robustness remain unmeasured here |
-| ABSENT is alignment loss | Failure of both lift tracks can reflect chain coverage, assembly differences, or evolutionary change; it does not prove a biological deletion or human-specific origin |
-| MAPPED is not motif retention | Partial motif-window alignment and sequence changes remain possible; a successful lift does not establish REST binding |
-| Target-span distortion | Long or shortened spans can complicate rescoring; width flags remain available for sensitivity analyses |
-| Pilot selection | A canonical-element chromosome pilot establishes an executable path, not generalization to other chromosomes, contrast elements, or species |
-| Continuous outcome versus binary labels | Context-matched repression and missingness are defined in the analysis dataset; Figure 2B binary labels remain unverified and unused. Gate-performance scales and on/off states still require definition |
-| Repeat overlap is a proxy | The conversion diagnostic does not directly label primate-specific elements or rule out differential evolutionary-class attrition |
-| Conservation is observational | Predictive improvement, if found, would not establish that evolutionary retention causes repression |
-| Evaluation remains unrun | Grouped folds and metric functions cannot establish out-of-sample performance until real inputs, models, and held-out predictions exist |
-
-These boundaries separate verified inputs and mapping evidence from proposed comparative interpretation and eventual experimental testing. The [research-design companion](README%20%282%29.md) develops the hypothesis and proposed analyses.
-
-## Team
-
-**Gabrielle DeCuir and Vrinda Sehgal** · Johns Hopkins Applied Comparative Genomics.
-
-The project builds on the published MPRAduo study and public reference resources. Repository validation results are this project's work; source-study measurements remain attributed to their authors.
+[Primary study](https://pmc.ncbi.nlm.nih.gov/articles/PMC9903721/) · [GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE196171) · [Author analysis](https://github.com/tewhey-lab/duoREST) · [UCSC](https://hgdownload.soe.ucsc.edu/downloads.html) · [JASPAR](https://jaspar.elixir.no/)

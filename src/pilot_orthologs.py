@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """Separate motif-window mapping from element mapping before extracting mouse DNA.
 
 A full element can pass minMatch while its motif window fails. Such an element

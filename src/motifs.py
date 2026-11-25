@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """FIMO scoring without p-value censoring or fabricated scores for missing hits."""
 
 from pathlib import Path

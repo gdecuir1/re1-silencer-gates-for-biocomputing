@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from src import config
-from src.io_mpra import load_mpra, tidy_mpra, validate_mpra
+from src.mpra_schema import load_mpra, tidy_mpra, validate_mpra
 
 
 def test_valid_tidy(tidy_table: pd.DataFrame) -> None:

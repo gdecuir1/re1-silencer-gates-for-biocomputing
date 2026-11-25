@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """Acquire the raw inputs for mouse REST-motif scoring.
 
 Nothing is downloaded on import. Run this module explicitly. It reuses the

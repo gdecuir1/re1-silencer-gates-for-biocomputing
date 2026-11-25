@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """Measure the chr8 hg38->mm39 minMatch tradeoff, then retain a complete mouse audit.
 
 Only hg38 and mm39 are verified. This module never downloads a genome, touches

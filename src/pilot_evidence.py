@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """Score the human starting site and publish uncertainty-aware pilot comparisons.
 
 The raw lift and FIMO tables remain measurements. Only a strong human canonical

@@ -44,7 +44,7 @@ HG19_REPEATS = RAW_DIR / "repeats" / "hg19.rmsk.txt.gz"
 HG38_ELEMENTS = PROCESSED_DIR / "elements_hg38.csv"
 TARGET_SPECIES = {"rheMac10", "mm39", "canFam6", "bosTau9", "monDom5"}
 EXPECTED_ELEMENT_COUNT = 8436
-# Week 2 pilot: canonical elements only, using verified hg38 coordinates.
+# Canonical mouse-comparison pilot: canonical elements only, using verified hg38 coordinates.
 PILOT_CHROM = "chr8"
 # chr8 sweep: 0.5 maps 227; 0.2/0.1 add mostly >20%-distorted spans (only 2 stable gains).
 MINMATCH_CROSS_SPECIES = 0.5

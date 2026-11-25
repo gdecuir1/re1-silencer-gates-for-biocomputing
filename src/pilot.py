@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """Verify the genomes needed by each step before publishing a canonical chr8 pilot.
 
 ``make pilot`` is offline: it never completes or repairs a genome download.
@@ -190,7 +193,7 @@ def verify_genome(assembly: str, executable: str | None) -> dict:
     return result
 
 
-# Dependencies name the actual consumers. Week 3 also uses the hg38 source;
+# Dependencies name the actual consumers. Multi-species analysis uses the hg38 source;
 # all five targets are required there, but this step is not run by the pilot.
 STEP_ASSEMBLIES = {
     "pilot": ("hg38",),
@@ -317,7 +320,7 @@ def report(genomes: list[dict], *, pilot=None, checks=None, errors=()) -> str:
         return "not measured" if value is None else f"{value:,}"
 
     lines = [
-        "# Week 2 pilot setup",
+        "# Canonical chr8 pilot setup",
         "",
         "## Genome gate",
         "",

@@ -1,3 +1,6 @@
+# Ortholog classification track: complete and frozen at mouse-pilot scope.
+# Retained for reproducible evidence; shared helpers do not imply other-species validation.
+
 """Flank-anchored synteny rescue, independent of the target assembly.
 
 Source flanks are adjacent to, and exclude, the full element. BED strands are

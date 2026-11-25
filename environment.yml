@@ -48,4 +48,4 @@ dependencies:
 #   git clone https://github.com/Dongwon-Lee/lsgkm.git
 #   cd lsgkm/src && make && cd ..
 #   export PATH="$PWD/bin:$PATH"
-# Do this in week 1, not week 4: a compile failure found late is a crisis.
+# Validate the lsgkm build before attempting model training.
