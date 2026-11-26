@@ -1,4 +1,4 @@
-"""Read only motif windows from remote bigWigs through pyBigWig/libBigWig."""
+"""Range-checked remote bigWig helpers and the production conservation entry point."""
 
 import re
 from collections.abc import Mapping
@@ -106,3 +106,9 @@ def query_conservation(
         finally:
             handle.close()
     return result
+
+
+if __name__ == "__main__":
+    from src.conservation_pipeline import main
+
+    main()

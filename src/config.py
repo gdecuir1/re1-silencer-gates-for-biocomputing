@@ -72,8 +72,17 @@ MPRA_REPRESSION_COLUMNS: dict[str, str | None] = dict.fromkeys(CELL_TYPES)
 MPRA_LAYOUT = "wide"  # "long" uses cell_type and repression in MPRA_COLUMNS.
 MPRA_SEPARATOR = "\t"
 
-# Choose and record the actual hg38 track URLs in data/README.md before querying.
-BIGWIG_URLS: dict[str, str | None] = {"phyloP": None, "phastCons": None}
+# Filenames confirmed in the UCSC hg38 directory listings; range reads only.
+CONSERVATION_TRACK = "Hiller Lab 470 Mammals"
+CONSERVATION_ALIGNED_GENOMES = 470
+CONSERVATION_SPECIES_COUNT = 431
+CONSERVATION_TRACK_SOURCE = "https://genome.ucsc.edu/cgi-bin/hgTrackUi?db=hg38&g=cons470way"
+BIGWIG_URLS: dict[str, str | None] = {
+    "phyloP": "http://hgdownload.soe.ucsc.edu/goldenPath/hg38/phyloP470way/hg38.phyloP470way.bw",
+    "phastCons": (
+        "http://hgdownload.soe.ucsc.edu/goldenPath/hg38/phastCons470way/hg38.phastCons470way.bw"
+    ),
+}
 
 # Operational defaults, NOT verified biological cutoffs. Record overrides.
 CDHIT_IDENTITY = 0.95
