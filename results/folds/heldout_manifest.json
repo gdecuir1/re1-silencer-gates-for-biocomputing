@@ -1,0 +1,45 @@
+{
+  "cdhit_binary_sha256": "79ffc75759fb3140f75006b008d708a88d6a348c66232ff92485f13312cf0ae2",
+  "cdhit_coverage": 0.95,
+  "cdhit_identity": 0.95,
+  "cdhit_version": "====== CD-HIT version 4.8.1 (built on Apr 24 2025) ======",
+  "inputs": {
+    "data/processed/conservation_features.csv": "3d0452f006ad792a77428cddd1b8731e47cf719ae43c6af2d27bfdb5c8420df5",
+    "data/processed/conservation_manifest.json": "20da6196006c0d77a53cf6225520ac4d656614e3faa9c666f9f07fbb3888c153",
+    "data/processed/elements_hg38.csv": "b4cb4dd081775625a9a58e89d44884d3a76169986c0efb47ea092eafa692adb2",
+    "data/processed/gate_metrics.csv": "19f90edbc0dc9c3a3e822c0638ceae1c3b2fa5e6f3f5d0a13e9017b3dda424b1",
+    "data/processed/liftover_hg19_to_hg38/element_audit.csv": "1f5dac1a71df36f05d9218d4fe3ba486597beaae5b9f6c6f79181220b384f1b8",
+    "results/tables/conservation_gate_preview_cases.csv": "f38288dd5cd2d88a51e27133ef186d3ce31a250fdb1a34590b08c2a43689b14f",
+    "results/tables/gate_cross_context_candidates.csv": "bc88b59691d31cc8a50d782b4c3cb89889a229e72a33e2c72b1d92043329418d",
+    "src/config.py": "42eda9fbbc9013e32262aa0d87f078b5a8b087458ee2037ad3ea605c383eb83a",
+    "src/conservation_io.py": "78847d3d6d0dd9d8ae188f088477160548901f43d203b917ee46066645d93712",
+    "src/folds.py": "7d79b3153b15f9bd4cc692bea8356bed5880d0cb1cb103453ad3db4d63079193",
+    "src/heldout_validation.py": "41a79e92dd52229c4d7b0317ebbb2beae7e97a5fbc6272c9b03534a611e8bf7b"
+  },
+  "largest_cluster": 3,
+  "m_value": 20.86,
+  "models": [
+    "FIMO rank OLS",
+    "FIMO + phyloP rank OLS"
+  ],
+  "n_clusters": 1143,
+  "n_elements": 1151,
+  "n_folds": 5,
+  "numpy": "2.4.6",
+  "outputs": {
+    "results/folds/heldout_assignments.csv": "5b6ed16b1aab148ac1d23bec58886416f2dd408a1060603ba94b95ec154a3249",
+    "results/folds/heldout_clusters.csv": "5161589433b70a93b32f37cd6699c749b8ce23ae39c0182aa5351f139d7213ed",
+    "results/folds/heldout_counts.csv": "8dec84e646d16f6890dd368c07ca372bccb7ea8b9e6c426b66b36604babe6af4",
+    "results/tables/heldout_coefficients.csv": "239cebbaac7043b6b842f90fdcb9ed8bab4ed885b0d51773bb7dda6cb2c87137",
+    "results/tables/heldout_coverage.csv": "d995aaa0b443197fee573a7275c02b0d708d0a91e6c586eeb78d74aa7227a14e",
+    "results/tables/heldout_predictions.csv": "6119a0103a4680322a196eed3c001896e6f76612e1579ef96e3c8550a4373820",
+    "results/tables/heldout_scores.csv": "319ee6ac23578e928236af92e6c9a421f474a9b02977eff5b8f212423a04ada1",
+    "results/tables/heldout_summary.csv": "1dc1050faeae75cdc447eee0c9ca8a152dfc22410384ee21d9b494a7c7bc31f5",
+    "results/tables/heldout_validation.md": "4c7385e68da2adf05c35a74a63b26d58bd5633a41abe9f720da18439919fed0f"
+  },
+  "pandas": "3.1.0",
+  "python": "3.11.17",
+  "ranking": "training-only empirical mid-distribution; average ties; intercept",
+  "remote_reads_performed": false,
+  "scipy": "1.17.1"
+}

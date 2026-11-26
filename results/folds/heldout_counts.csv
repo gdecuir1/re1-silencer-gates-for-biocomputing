@@ -1,0 +1,6 @@
+fold,n_elements,n_clusters,n_components,chromosomes
+0,235,233,4,"chr10,chr16,chr18,chr4,chr9"
+1,227,225,4,"chr12,chr20,chr21,chr3,chr6"
+2,232,232,4,"chr1,chr14,chr8,chrX"
+3,223,220,5,"chr11,chr15,chr2,chr7,chrY"
+4,234,233,5,"chr13,chr17,chr19,chr22,chr5"

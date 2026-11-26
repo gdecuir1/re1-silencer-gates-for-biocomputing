@@ -1,0 +1,32 @@
+{
+  "algorithm": "sha256",
+  "artifacts": 10,
+  "byte_identical": true,
+  "command": "make validate-models PYTHON=.venv/bin/python (cd-hit-est on PATH)",
+  "first_run": {
+    "results/folds/heldout_assignments.csv": "5b6ed16b1aab148ac1d23bec58886416f2dd408a1060603ba94b95ec154a3249",
+    "results/folds/heldout_clusters.csv": "5161589433b70a93b32f37cd6699c749b8ce23ae39c0182aa5351f139d7213ed",
+    "results/folds/heldout_counts.csv": "8dec84e646d16f6890dd368c07ca372bccb7ea8b9e6c426b66b36604babe6af4",
+    "results/folds/heldout_manifest.json": "7f9b65a35d7726b1d1ca21bc2a1cf9d61535a83258cba958bb6c634a9b200dbd",
+    "results/tables/heldout_coefficients.csv": "239cebbaac7043b6b842f90fdcb9ed8bab4ed885b0d51773bb7dda6cb2c87137",
+    "results/tables/heldout_coverage.csv": "d995aaa0b443197fee573a7275c02b0d708d0a91e6c586eeb78d74aa7227a14e",
+    "results/tables/heldout_predictions.csv": "6119a0103a4680322a196eed3c001896e6f76612e1579ef96e3c8550a4373820",
+    "results/tables/heldout_scores.csv": "319ee6ac23578e928236af92e6c9a421f474a9b02977eff5b8f212423a04ada1",
+    "results/tables/heldout_summary.csv": "1dc1050faeae75cdc447eee0c9ca8a152dfc22410384ee21d9b494a7c7bc31f5",
+    "results/tables/heldout_validation.md": "4c7385e68da2adf05c35a74a63b26d58bd5633a41abe9f720da18439919fed0f"
+  },
+  "inputs_unchanged": true,
+  "remote_reads_performed": false,
+  "second_run": {
+    "results/folds/heldout_assignments.csv": "5b6ed16b1aab148ac1d23bec58886416f2dd408a1060603ba94b95ec154a3249",
+    "results/folds/heldout_clusters.csv": "5161589433b70a93b32f37cd6699c749b8ce23ae39c0182aa5351f139d7213ed",
+    "results/folds/heldout_counts.csv": "8dec84e646d16f6890dd368c07ca372bccb7ea8b9e6c426b66b36604babe6af4",
+    "results/folds/heldout_manifest.json": "7f9b65a35d7726b1d1ca21bc2a1cf9d61535a83258cba958bb6c634a9b200dbd",
+    "results/tables/heldout_coefficients.csv": "239cebbaac7043b6b842f90fdcb9ed8bab4ed885b0d51773bb7dda6cb2c87137",
+    "results/tables/heldout_coverage.csv": "d995aaa0b443197fee573a7275c02b0d708d0a91e6c586eeb78d74aa7227a14e",
+    "results/tables/heldout_predictions.csv": "6119a0103a4680322a196eed3c001896e6f76612e1579ef96e3c8550a4373820",
+    "results/tables/heldout_scores.csv": "319ee6ac23578e928236af92e6c9a421f474a9b02977eff5b8f212423a04ada1",
+    "results/tables/heldout_summary.csv": "1dc1050faeae75cdc447eee0c9ca8a152dfc22410384ee21d9b494a7c7bc31f5",
+    "results/tables/heldout_validation.md": "4c7385e68da2adf05c35a74a63b26d58bd5633a41abe9f720da18439919fed0f"
+  }
+}
