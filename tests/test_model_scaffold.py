@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src import metrics, models
+from src import metrics
+from src import model_scaffold as models
 
 
 def test_evaluation_known_ordering() -> None:

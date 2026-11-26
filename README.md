@@ -1,21 +1,25 @@
 # RE1 Silencer Gates
 
-## Findings
-
-- **Exact motif scoring:** all **7,005 of 7,005** published canonical-site scores match after correcting the motif offset to **(90, 110)**.
-- **m-value enrichment:** at **20.86**, diagnostic negative-activity calls are enriched **5.24×** in HepG2, **4.74×** in SK-N-SH, **6.95×** in K562 and **1.11×** in GM12878.
-- **Enhancer context changes repression:** the SK-N-SH motif-versus-noMotif gap is **0.74** with En02 and **−0.01** with En21; score–repression correlations span **0.57 to 0.28** across **20** contexts.
-- **Chain-only classification mixes distinct evidence:** the **390** mouse-pilot elements resolve into **20 retention candidates, 18 nonretention candidates, 63 unresolved and 289 human-weak sites**.
-
 **Comparative genomics and reporter assays for prioritizing RE1 silencers as candidate transcriptional NOT-gate components.**
 
 Gabrielle DeCuir and Vrinda Sehgal · Johns Hopkins Applied Comparative Genomics
+
+## Findings
+
+- **Conservation distinguishes strong from weak RE1 sites:** median motif-window phyloP is **0.88** above the **20.86** motif-score threshold, **−0.06** below it and **0.13** for noMotif elements. [Conservation](results/tables/conservation.md)
+- **The outcome and cohort matter:** across all canonical elements, conservation adds essentially no information beyond motif score about NegCtrl-relative repression (**partial Spearman −0.05 to 0.04**). Among above-threshold scrambled pairs, partial correlations are **0.21–0.26** for dynamic range and **0.25** for cross-context robustness. [Endpoint comparison](results/tables/conservation.md#conservation-versus-gate-outcomes--descriptive-preview)
+- **Conservation improves held-out prediction:** adding motif-window phyloP to ranked FIMO raises held-out Spearman by **+0.02 to +0.04** across chromosome-grouped folds, positive in **28 of 30** fold-outcome comparisons. Both negative folds are the fold with the highest baseline correlation. [Held-out validation](results/tables/heldout_validation.md)
+- **Exact motif scoring:** all **7,005 of 7,005** published canonical-site scores match after correcting the motif offset to **(90, 110)**. [Scoring validation](results/tables/scoring_validation.md)
+- **m-value enrichment:** at **20.86**, diagnostic negative-activity calls are enriched **5.24×** in HepG2, **4.74×** in SK-N-SH, **6.95×** in K562 and **1.11×** in GM12878. [Threshold relationship](results/tables/threshold_enrichment.md)
+- **Enhancer context changes repression:** the SK-N-SH motif-versus-noMotif gap is **0.74** with En02 and **−0.01** with En21; score–repression correlations span **0.57 to 0.28** across **20** contexts. [Context ranking](results/tables/analysis_dataset.md)
+- **Operating regions and candidates:** **5** contexts pass the ON/range screen. **1,108** scrambled-paired candidates qualify for ranking by their weakest measured context percentile; **184** are excluded for insufficient coverage. [Gate metrics](results/tables/gate_metrics.md)
+- **Chain-only classification mixes distinct evidence:** the **390** mouse-pilot elements resolve into **20 retention candidates, 18 nonretention candidates, 63 unresolved and 289 human-weak sites**. [Pilot evidence](results/tables/pilot_mouse_evidence.md)
 
 ## The question and current state
 
 RE1 is a DNA binding site for the transcriptional repressor REST. This project asks whether sequence conservation adds predictive information about human RE1-mediated repression beyond the REST motif score. The source MPRAduo experiment measures reporter activity with a silencer paired to an enhancer. The engineering goal is a defensible candidate list for experimental testing.
 
-The completed analyses establish sequence-verified human coordinates, a mouse comparison pilot, validated motif scores, and a continuous activity dataset. Human assembly conversion retained **12,815 of 12,866** native elements. The analysis dataset preserves **267,440** source observations at **element × cell type × enhancer** resolution, including missing measurements. The mouse classification track is **complete and frozen at pilot scope**; conservation extraction and the corrected sanity gate are complete, and the features are joined to the analysis dataset. FIMO-adjusted conservation–repression correlations are near zero in all five passing contexts. For above-threshold scrambled-pair candidates, however, adjusted correlations are **0.21–0.26** with dynamic range and **0.25** with cross-context robustness. Predictive models remain open; reporter gate metrics and cross-context rankings are available. [Conservation gate](results/tables/conservation.md) · [Gate metrics](results/tables/gate_metrics.md) · [Human conversion](results/tables/liftover_hg19_to_hg38.md) · [Analysis dataset](results/tables/analysis_dataset.md)
+The project now connects sequence-verified human coordinates, validated motif scores, matched reporter states and continuous conservation to chromosome-held-out prediction. Human assembly conversion retained **12,815 of 12,866** native elements. The continuous dataset preserves **267,440** observations at **element × cell type × enhancer** resolution. The mouse classification track is complete and frozen; the main deliverable is a ranked set of silencer–enhancer candidates supported by reporter measurements and a fixed comparison of motif-only versus motif-plus-conservation models. [Human conversion](results/tables/liftover_hg19_to_hg38.md) · [Dataset](results/tables/analysis_dataset.md) · [Held-out validation](results/tables/heldout_validation.md)
 
 The assayed cells are GM12878, HepG2, K562 and SK-N-SH. The dataset contains canonical-site elements (`motif`), REST-peak elements without the canonical motif (`noMotif`), and negative controls (`NegCtrl`). All measured results below come from the linked reports; the [report index](results/README.md) distinguishes current evidence from superseded interpretations.
 
@@ -58,6 +62,64 @@ Within canonical elements, Spearman correlation between FIMO score and matched r
 Baseline and gap are in log2 activity units; correlation is unitless. The [complete ranked table](results/tables/analysis_dataset.md#ranked-contexts) includes every context, baseline spread, pair counts and Pearson correlations. GM12878 has a positive continuous score response despite its weak binary diagnostic enrichment; the endpoints answer different questions.
 
 For sequence-response analysis, carry forward the strongest context within each cell: SK-N-SH/En02, HepG2/En02, K562/En02 and GM12878/En09. Also retain En19 separately in every cell for active-enhancer follow-up: En02 is the source study's background-control enhancer and has a near-zero baseline. [Recommendation and baseline evidence](results/tables/analysis_dataset.md#context-recommendation)
+
+### Operating regions and cross-context candidates
+
+A useful reporter pair needs an expressed ON state and a lower OFF state. **ON** is the element's scrambled-motif activity; **OFF** is its intact-motif activity. **Dynamic range = ON − OFF**, in log2 units; **leakiness = OFF activity** on the same scale. Separation divides dynamic range by the root-mean-square published standard error of the two states. The metrics remain separate.
+
+The screen requires median ON **≥1.00** and median dynamic range **≥1.00**, using above-threshold elements. Its context summaries use the recorded scrambled or same-context NegCtrl references; primary candidate rankings use scrambled pairs only. These contexts pass:
+
+| Cell / enhancer | Median ON (log2 activity) | Median dynamic range (log2 units) |
+| --- | ---: | ---: |
+| HepG2 / En19 | 2.37 | 1.14 |
+| K562 / En09 | 4.32 | 1.00 |
+| K562 / En11 | 1.19 | 1.44 |
+| K562 / En19 | 2.65 | 1.22 |
+| SK-N-SH / En19 | 2.72 | 1.34 |
+
+Source: [operating-region screen](results/tables/gate_metrics.md#operating-region-screen). En02 is highly REST-responsive but has almost no ON state to switch; En21 has a high ON state with insufficient repression. Thus score responsiveness alone does not identify a useful operating region. K562/En11 passes as well as En19 and En09 contexts.
+
+Of **1,292** above-threshold elements with a designed scrambled reference, **1,108** have measured pairs in at least **4 of 5** passing contexts; **184** are excluded for coverage. Rank candidates by their **minimum measured dynamic-range percentile**, showing the median percentile, each context's raw range and OFF activity alongside. Motif score correlates with this robustness measure at **Spearman 0.58**. NegCtrl fallback rankings are separate because every fallback element in a context shares the same ON baseline. [Candidate selection and complete ranking](results/tables/gate_metrics.md#cross-context-candidate-selection-weakest-measured-percentile)
+
+### Conservation predicts reporter gate quality among strong RE1 candidates
+
+**Conservation adds predictive information about gate quality among above-threshold RE1 candidates.** Motif-window phyloP separates the score-defined populations:
+
+| Population | Elements with complete motif-window coverage | Median phyloP |
+| --- | ---: | ---: |
+| Canonical, FIMO ≥20.86 | 1,835 | 0.88 |
+| Canonical, FIMO <20.86 | 6,464 | −0.06 |
+| noMotif | 4,359 | 0.13 |
+
+Source: [conservation strata](results/tables/conservation.md#score-stratified-motif-window-phylop-distributions). Motif-scale analysis uses per-base phyloP; full-element phastCons is retained as a secondary feature. The corrected sanity gate passed using cached windows, with the original failed checks preserved in the report.
+
+The descriptive results depend on the measured outcome and the population:
+
+| Outcome and cohort | FIMO-adjusted Spearman with motif-window phyloP |
+| --- | ---: |
+| NegCtrl-relative repression, all canonical elements | −0.05 to 0.04 |
+| Scrambled-pair dynamic range, above-threshold canonical elements | 0.21 to 0.26 |
+| Minimum context percentile, above-threshold scrambled-pair candidates | 0.25 |
+| Scrambled-pair dynamic range, all canonical scores | 0.07 to 0.09 |
+
+Source: [conservation previews](results/tables/conservation.md). Raw and adjusted correlations use the same complete cases. Partial Spearman correlates residual ranks after removing their linear relationship with ranked FIMO.
+
+An element-matched scrambled reference controls the surrounding sequence and measures the effect of disrupting that element's motif. A NegCtrl median supplies a shared cell/enhancer baseline across different sequences. The matched comparison therefore targets motif-dependent switching more directly. Cohort composition matters too: **6,582 of 8,436 canonical elements (78.02%)** score below the m-value, where repression is much less frequent. Including this weak-motif majority dilutes the association seen among strong sites. The claim concerns gate quality within the above-threshold candidate population, not a universal predictor for every canonical motif match. [Score strata and endpoint evidence](results/tables/conservation.md) · [Threshold response](results/tables/threshold_enrichment.md)
+
+### Held-out chromosomes test the added information
+
+The fixed comparison uses **1,151** complete-case elements across the requested endpoints, clustered into **1,143** CD-HIT groups with a largest cluster of **3**. Whole chromosomes and clusters stay together. The **5** folds contain **235, 227, 232, 223 and 234** elements; each endpoint uses its available complete cases. Both models are linear regressions on training-only ranks: FIMO alone, or FIMO plus motif-window phyloP. There is no tuning or feature selection.
+
+| Outcome / context | Mean baseline ρ | Mean augmented ρ | Mean Δρ | Fold Δρ range | Folds improved |
+| --- | ---: | ---: | ---: | --- | ---: |
+| HepG2 / En19 | 0.59 | 0.62 | +0.04 | +0.01 to +0.05 | 5/5 |
+| K562 / En09 | 0.64 | 0.66 | +0.02 | +0.01 to +0.05 | 5/5 |
+| K562 / En11 | 0.50 | 0.54 | +0.04 | -0.01 to +0.07 | 4/5 |
+| K562 / En19 | 0.56 | 0.59 | +0.04 | +0.01 to +0.06 | 5/5 |
+| SK-N-SH / En19 | 0.54 | 0.58 | +0.04 | +0.01 to +0.06 | 5/5 |
+| Robustness | 0.57 | 0.61 | +0.04 | -0.01 to +0.06 | 4/5 |
+
+Source: [held-out validation](results/tables/heldout_validation.md), including every fold's scores and sample sizes. Conservation improves dynamic-range prediction in every fold for HepG2/En19, K562/En09, K562/En19 and SK-N-SH/En19. K562/En11 and robustness each improve in **4/5** folds and fail the strict every-fold consistency criterion. Across all six outcomes and five folds, **28 of 30** comparisons are positive; both negatives fall in the fold with the highest baseline correlation for its outcome (0.645 and 0.659, against 0.40–0.61 in the remaining folds), where motif score alone leaves least room to improve. The result supports a modest, consistent predictive gain. Fold assignments and their provenance are versioned in `results/folds/`.
 
 ### Chain lifting alone contaminates ortholog classification
 
@@ -106,7 +168,7 @@ Coordinates use zero-based, half-open BED intervals. The motif offset uses inclu
 
 ## Pipeline and implementation status
 
-Paths are relative to the repository root. **Complete** means implemented and run for the stated scope. **Helper only** means tested mechanics exist but no production analysis is claimed. The mouse branch is complete and frozen.
+Paths are relative to the repository root. **Complete** means implemented and run for the stated scope. The mouse branch is complete and frozen.
 
 | Stage, in execution order | Status | Module / entry point | Make target | Principal output | Report |
 | --- | --- | --- | --- | --- | --- |
@@ -122,23 +184,29 @@ Paths are relative to the repository root. **Complete** means implemented and ru
 | Human strength, chain correspondence and comparison eligibility | Complete; frozen | `src/pilot_evidence.py`, `src/alignment_evidence.py`, `src/classify.py` | `pilot-validate` | `data/processed/pilot_mouse_evidence/calls.csv` | [Final pilot comparison](results/tables/pilot_mouse_evidence.md) |
 | Full canonical scoring and activity/sign audit | Complete; continuous override recorded | `src/scoring_validation.py` | `scoring-validation` | `data/processed/scoring_validation/canonical_scores.csv`, `gate.json` | [Validation and limitation](results/tables/scoring_validation.md) |
 | Context-matched continuous dataset | Complete | `src/dataset.py` | `dataset` | `data/processed/analysis_dataset.csv`, `analysis_dataset_contexts.csv` | [Dataset and context ranking](results/tables/analysis_dataset.md) |
-| Remote conservation features and dataset join | Complete; corrected gate passed; original failure preserved | `src/conservation.py`, `src/conservation_io.py`, `src/conservation_pipeline.py` | `conservation` | `data/processed/conservation_features.csv`, `analysis_dataset_conservation.csv` | [Conservation checks and coverage](results/tables/conservation.md) |
-| Additional species: rheMac10, canFam6, bosTau9, monDom5 | Analysis not started; shared lift/rescue helpers exist | `src/orthologs.py`, `src/rescue.py`; mouse orchestration is not generalized | None | No validated comparative table | No report |
-| Cofactor ChIP-seq features | Not started | No production module or selected feature set | None | None | No report |
-| Chromosome/CD-HIT grouped folds | Helper only; production folds not constructed | `src/folds.py` | None | `results/folds/assignments.csv` is a configured destination, not a completed result | No production report |
-| Motif-only, motif+conservation, motif+cofactor, gapped-k-mer models | Training not started; explicit stubs | `src/models.py` | None | No fitted models or held-out predictions | No report |
-| Gate dynamic range, leakiness, separation and cross-context rankings | Complete reporter analysis | `src/metrics.py`, `src/gate_metrics.py`, `src/cross_context.py` | `gate-metrics` | `results/tables/gate_metrics_rankings.csv`, `gate_cross_context_candidates.csv` | [Gate metrics](results/tables/gate_metrics.md) |
-| Variant robustness | Not started; explicit stub | `src/metrics.py::variant_robustness` | None | No robustness analysis | No report |
+| Reporter operating regions and cross-context rankings | Complete | `src/metrics.py`, `src/gate_metrics.py`, `src/cross_context.py` | `gate-metrics` | `results/tables/gate_metrics_rankings.csv`, `gate_cross_context_candidates.csv` | [Gate metrics](results/tables/gate_metrics.md) |
+| Conservation extraction, corrected gate, join and endpoint previews | Complete; offline replay uses cached windows | `src/conservation.py`, `src/conservation_io.py`, `src/conservation_pipeline.py`, `src/conservation_gate_preview.py` | `conservation` | `data/processed/conservation_features.csv`, `analysis_dataset_conservation.csv` | [Conservation](results/tables/conservation.md) |
+| Chromosome/CD-HIT grouped folds | Complete; assignments committed | `src/folds.py`, `src/heldout_validation.py` | `validate-models` | `results/folds/heldout_assignments.csv` | [Fold construction](results/tables/heldout_validation.md) |
+| FIMO-only and FIMO-plus-phyloP rank-linear models | Complete; no tuning | `src/heldout_validation.py` | `validate-models` | `results/tables/heldout_scores.csv`, `heldout_predictions.csv` | [Held-out results](results/tables/heldout_validation.md) |
+| Additional species: rheMac10, canFam6, bosTau9, monDom5 | Scoped out; not run | Shared `src/orthologs.py`, `src/rescue.py`; mouse orchestration remains specific | None | No validated expanded comparison | None |
+| Cofactor ChIP-seq features | Scoped out; not built | No production feature module | None | None | None |
+| Cofactor and gapped-k-mer models | Scoped out; explicit scaffolds | `src/model_scaffold.py` | None | No fitted models | None |
+| Variant robustness | Scoped out; explicit stub | `src/metrics.py::variant_robustness` | None | No variant analysis | None |
 
 `pilot-validate` rebuilds pilot selection, element lifting, motif lifting and extraction, then runs mouse scoring, rescue and evidence publication in order. Human conversion is an explicit prerequisite, not silently rerun. The continuous dataset consumes validated scores and activities independently of mouse mapping eligibility. `classify.py` supplies conservative state mechanics.
 
-The legacy `src/mpra_schema.py` helper assumes complete element/cell pairs, and the generic model evaluator requires binary labels and lacks enhancer keys. Neither is used by `dataset.py`. Production modeling must preserve context and missingness and adapt evaluation to the continuous outcome.
+The legacy `src/mpra_schema.py` helper and the model scaffold retain their original element/cell contracts. The production dataset and held-out validation preserve enhancer context and missingness. `src/models.py` remains a compatibility import for `src/model_scaffold.py`; the fitted rank-linear comparison lives in `src/heldout_validation.py`.
 
-## Open analyses and candidate priorities
+## Candidate priorities
 
-Prioritize retention candidates for sequence-and-activity review, nonretention candidates for matched contrasts, and unresolved cases for correspondence review. Human-weak sites remain part of repression modeling and a useful score contrast. These priorities follow the [pilot evidence categories](results/tables/pilot_mouse_evidence.md).
+Use the scrambled-pair cross-context ranking to select candidates with strong minimum percentiles, then inspect raw dynamic ranges, OFF levels and missing contexts. Conservation adds evidence within this strong-motif population. Keep the frozen mouse retention, nonretention and unresolved groups as a separate sequence-comparison resource. [Candidate list](results/tables/gate_metrics.md) · [Held-out evidence](results/tables/heldout_validation.md) · [Pilot groups](results/tables/pilot_mouse_evidence.md)
 
-The corrected conservation checks pass, and the joined features are available. The descriptive preview distinguishes endpoints: residual association is near zero for NegCtrl-relative repression, but positive for above-threshold scrambled-pair dynamic range and cross-context robustness. Held-out modeling must determine whether conservation adds predictive value. Construct leakage-safe folds and compare the stated model families within separate enhancer contexts. Additional species and cofactor features remain open. Reporter gate metrics use explicit scrambled or NegCtrl references; variant robustness still requires validated variant-to-element mapping. [Conservation gate](results/tables/conservation.md)
+## Future work and scope decisions
+
+- **Additional species:** rheMac10, canFam6, bosTau9 and monDom5 were scoped out to focus on continuous mammalian conservation and the human reporter endpoint. Each expansion would require its own correspondence and sequence-verification audit.
+- **Cofactor ChIP-seq features:** scoped out because cell-matched occupancy sources and feature definitions need validation before they can support interpretation.
+- **Cofactor and gapped-k-mer models:** scoped out to keep the comparison focused on conservation's added information. The fitted models use only motif score and phyloP; richer models would introduce feature selection or tuning and require a nested evaluation design.
+- **Variant robustness:** scoped out because variant-to-element correspondence and the intended perturbation endpoint need validation. Cross-context consistency addresses a different question.
 
 ## Reproducing and checking the work
 
@@ -159,6 +227,9 @@ make lift
 make pilot-validate
 make scoring-validation
 make dataset
+make gate-metrics
+make conservation
+make validate-models
 ```
 
 Use `make TARGET PYTHON=/path/to/python` to select an interpreter. Reference acquisition is explicit and separate: `src/fetch_lift_inputs.py` fetches human conversion inputs, `src/fetch_mouse_scoring_inputs.py` fetches mouse scoring inputs, and `scripts/fetch_genomes.sh` manages manual genome downloads. See the [data catalog](data/README.md) for source locations and provenance. The scoring audit also requires its cached author result tables and score evidence; the analysis targets do not fetch missing inputs.
@@ -177,7 +248,8 @@ The [dataset replay receipt](results/tables/analysis_dataset_reproducibility.jso
 | `references/` | Published sequence/score fixtures and provenance. |
 | `data/raw/`, `data/processed/` | Local source data, verified sequences and derived observation/evidence tables; do not commit artifacts. |
 | `results/tables/` | Reported measurements, limitations and reproducibility receipts. |
-| `results/figures/` | Saved mapping/FIMO flow and scoring-validation figures; the flow shows raw mapping/scan states, not the final comparison groups. |
+| `results/figures/` | Saved operating-region, cross-context candidate, conservation, scoring and mapping figures. |
+| `results/folds/` | Versioned chromosome/cluster assignments, provenance and reproducibility receipt. |
 | `results/README.md` | Current versus superseded report index and organization decisions. |
 
 Generated data and most results are ignored by Git. The root README is self-contained for the measured findings; linked local artifacts require the documented caches or reproduction commands in a fresh checkout. The research-design companion is background, not the authority for implementation status.
@@ -187,10 +259,11 @@ Generated data and most results are ignored by Git. The root README is self-cont
 - **Published binary labels remain unreproduced and unused.** Exact motif scores and identical GEO activities support continuous analysis; they do not repair the missing matched-enhancer Figure 2B labels. Supplied padj is not interpreted as that silencer FDR.
 - **MPRA is episomal.** Reporter effects do not establish behavior in chromosomal integration, endogenous chromatin or coupled circuits.
 - **These are cell lines, not mature neurons.** SK-N-SH does not establish behavior in neurons, organoids or neural computing systems.
-- **The output is candidate evidence, not demonstrated gates.** Switching behavior, dynamic range, leakiness and robustness are unmeasured here.
+- **The output is candidate evidence, not demonstrated gates.** Dynamic range, OFF activity and cross-context consistency are derived from reporter measurements; switching behavior in a coupled circuit remains untested.
+- **The operating screen is an engineering choice.** ON/range cutoffs are not experimentally calibrated circuit requirements. Separation uses published standard errors, not replicate spread; no REST occupancy was measured. Scrambled constructs can alter an adjacent base as well as the scored core. Stable cross-context rank does not imply stable magnitude or a low OFF state.
 - **Alignment uncertainty is not biological absence.** A disrupted motif or failed chain projection needs its own interpretation; the ancestral state is not identified by the mouse comparison.
-- **Generalization is untested.** The mouse classification pilot does not establish other-species performance, and descriptive context rankings are not held-out model validation.
-- **Conservation is observational.** Added predictive value, if demonstrated, would not establish that evolutionary retention causes repression.
+- **Generalization has a defined scope.** Chromosome-held-out validation is internal to this dataset. The cohort and passing contexts were selected after inspecting the data; this is not an independent external replication. The mouse pilot does not validate additional species.
+- **Conservation is observational.** Its predictive gain does not establish that evolutionary retention causes repression. The comparison changes both reference type and score cohort, so it does not isolate their separate contributions. The m-value defines a score stratum, not a verified binary functional label: some weak sites repress and some strong sites do not. "Functional RE1" here refers to the strong-site candidate population, not demonstrated function for every sequence.
 
 ## Sources and attribution
 

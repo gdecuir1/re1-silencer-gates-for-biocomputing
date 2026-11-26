@@ -3,7 +3,7 @@ CONDA ?= conda
 
 .PHONY: env assembly-check lift pilot pilot-mouse pilot-orthologs pilot-fimo pilot-rescue pilot-validate scoring-validation dataset gate-metrics conservation validate-models test lint clean
 
-# Environment and explicit acquisition
+# Environment and explicit input acquisition
 # Data targets below are offline; fetch commands are separate:
 # python -m src.assembly_check --fetch
 # python -m src.fetch_lift_inputs [--genome]
@@ -13,7 +13,7 @@ CONDA ?= conda
 env:
 	$(CONDA) env create -f environment.yml
 
-# Source assembly: cached oligos -> assembly evidence -> verified hg38 elements
+# Human coordinates: assembly resolution -> hg38 lift and sequence verification
 # Source discovery is a recorded inventory, not an automated make target.
 
 assembly-check:
@@ -22,7 +22,7 @@ assembly-check:
 lift:
 	$(PYTHON) -m src.lift
 
-# Ortholog classification: complete and frozen at mouse-pilot scope
+# Frozen mouse track: pilot -> element lift -> motif lift and extraction
 # Requires the verified hg38 catalog from lift; never relifts or downloads implicitly.
 # Canonical selection -> element lift -> motif lift, three-way calls and extraction.
 
@@ -35,7 +35,7 @@ pilot-mouse: pilot
 pilot-orthologs: pilot-mouse
 	$(PYTHON) -m src.pilot_orthologs
 
-# Frozen classification: mapped-window FIMO -> flank regions -> correspondence audit
+# Frozen mouse track: FIMO -> flank rescue -> correspondence evidence
 # FIMO and rescue consume existing inputs without rebuilding upstream stages.
 
 pilot-fimo:
@@ -57,7 +57,7 @@ pilot-validate: pilot-orthologs
 	$(MAKE) pilot-rescue
 	$(PYTHON) -m src.pilot_evidence
 
-# Continuous analysis: canonical score/sign audit -> context-matched dataset
+# Human activity: scoring/sign validation -> context-matched dataset
 # The explicit continuous override is preserved; scoring/sign errors still fail.
 # Dataset consumes cached validated scores; it does not silently rerun this audit.
 
@@ -67,23 +67,25 @@ scoring-validation:
 dataset:
 	$(PYTHON) -m src.dataset
 
-# Reporter operating regions from matched scrambled/NegCtrl ON states; no enhancer pooling.
+# Reporter outcomes: matched ON/OFF -> operating regions -> cross-context ranks
+# No enhancer pooling; separate scrambled and NegCtrl references.
 gate-metrics:
 	$(PYTHON) -m src.gate_metrics
 
-# Continuous mammalian conservation: strictly offline replay and corrected sanity gate.
+# Conservation: cached features -> corrected sanity gate -> join -> endpoint previews
 # Missing or changed extraction snapshots fail; this target never re-extracts.
 conservation:
 	$(PYTHON) -m src.conservation
 
-# Fixed chromosome/cluster folds and two rank-linear models; cached inputs only.
+# Held-out evaluation: chromosome/CD-HIT folds -> two fixed rank-linear models
+# Cached inputs only; no tuning or model selection.
 validate-models:
 	$(PYTHON) -m src.heldout_validation
 
 # Remaining production stages: cofactors, broader models, variant robustness,
 # and species expansion. No placeholder target claims completion.
 
-# Verification and disposable caches
+# Software checks
 
 test:
 	$(PYTHON) -m pytest
@@ -91,6 +93,7 @@ test:
 lint:
 	$(PYTHON) -m ruff check .
 
+# Disposable cache cleanup (not an analysis stage)
 clean:
 	rm -rf .pytest_cache .ruff_cache
 	find src tests notebooks -type d -name __pycache__ -prune -exec rm -rf {} +
